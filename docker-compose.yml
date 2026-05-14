@@ -1,0 +1,60 @@
+services:
+  # ─── Tier 3: PostgreSQL Database ───────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: cc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cardcanvas
+      POSTGRES_PASSWORD: cardcanvas
+      POSTGRES_DB: cardcanvas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cardcanvas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Tier 2: Rust Backend (Axum API) ───────────────────────────────────────
+  backend:
+    build:
+      context: ./cardcanvas-backend
+      dockerfile: Dockerfile
+    container_name: cc-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://cardcanvas:cardcanvas@postgres:5432/cardcanvas
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      FRONTEND_URL: http://localhost:3000
+      PORT: "8080"
+      RUST_LOG: cardcanvas_backend=debug,tower_http=info
+      MEDIA_DIR: /app/uploads
+    ports:
+      - "8080:8080"
+    volumes:
+      - media_uploads:/app/uploads
+
+  # ─── Tier 1: Next.js Frontend ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./cardcanvas-v3
+      dockerfile: Dockerfile
+    container_name: cc-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8080
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  media_uploads:

@@ -1,0 +1,172 @@
+'use client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Upload, Clipboard, Link2 } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuth } from '@/components/AuthContext';
+import { inferMediaType } from '@/lib/mediaType';
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (url: string, uploadMime?: string) => void;
+}
+
+export default function AddMediaModal({ open, onClose, onConfirm }: Props) {
+  const { user } = useAuth();
+  const [url, setUrl] = useState('');
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploadMime, setUploadMime] = useState<string | undefined>();
+  const [uploading, setUploading] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const reset = useCallback(() => {
+    setUrl('');
+    setPreview(null);
+    setUploadMime(undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!open) { reset(); return; }
+    const t = setTimeout(() => panelRef.current?.focus(), 0);
+    return () => clearTimeout(t);
+  }, [open, reset]);
+
+  const handleFile = useCallback(async (file: File | null | undefined) => {
+    if (!file || !user) return;
+    setUploading(true);
+    try {
+      const result = await api.media.upload(file);
+      setUrl(result.url);
+      setUploadMime(result.mimeType);
+      setPreview(result.url);
+    } catch (err) {
+      console.error('Upload failed:', err);
+    } finally {
+      setUploading(false);
+    }
+  }, [user]);
+
+  const handleClipboardData = useCallback(
+    async (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData('text/plain')?.trim();
+      const file = e.clipboardData?.files?.[0];
+      if (file) { e.preventDefault(); await handleFile(file); return; }
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          if (it.kind === 'file') {
+            const f = it.getAsFile();
+            if (f) { e.preventDefault(); await handleFile(f); return; }
+          }
+        }
+      }
+      if (text && /^https?:\/\//i.test(text)) {
+        e.preventDefault();
+        setUrl(text);
+        setUploadMime(undefined);
+        setPreview(inferMediaType(text) === 'image' ? text : null);
+      }
+    },
+    [handleFile]
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const onPaste = (e: ClipboardEvent) => { void handleClipboardData(e); };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [open, handleClipboardData]);
+
+  const onDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await handleFile(e.dataTransfer.files?.[0]);
+  }, [handleFile]);
+
+  const submit = () => {
+    const u = url.trim();
+    if (!u) return;
+    onConfirm(u, uploadMime);
+    reset();
+    onClose();
+  };
+
+  const kind = preview || url.trim() ? inferMediaType(url.trim() || preview || '', uploadMime) : null;
+
+  if (!open) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-media-title"
+        tabIndex={-1}
+        className="editor-modal add-media-modal"
+        onClick={e => e.stopPropagation()}
+        onDragOver={e => e.preventDefault()}
+        onDrop={onDrop}
+      >
+        <h3 id="add-media-title" className="add-media-title">Add MEDIA</h3>
+
+        <div className="add-media-preview">
+          {uploading ? (
+            <div className="add-media-preview-empty">
+              <span className="auth-spinner" />
+              <span>Uploading…</span>
+            </div>
+          ) : preview && kind === 'image' ? (
+            <img src={preview} alt="" className="add-media-preview-img" />
+          ) : preview && kind === 'pdf' ? (
+            <div className="add-media-preview-pdf">
+              <span className="add-media-preview-pdf-icon">📄</span>
+              <span>PDF ready to add</span>
+            </div>
+          ) : url.trim() && kind === 'link' ? (
+            <div className="add-media-preview-link">
+              <Link2 size={22} />
+              <span className="add-media-preview-link-url">
+                {url.trim().slice(0, 80)}{url.trim().length > 80 ? '…' : ''}
+              </span>
+            </div>
+          ) : (
+            <div className="add-media-preview-empty">
+              <Clipboard size={20} />
+              <span>Paste image, PDF, or a link — or upload a file</span>
+            </div>
+          )}
+        </div>
+
+        <input
+          className="inline-input add-media-url-input"
+          placeholder="Paste URL here…"
+          value={url}
+          onChange={e => {
+            const v = e.target.value;
+            setUrl(v);
+            setUploadMime(undefined);
+            const t = v.trim();
+            if (t && inferMediaType(t) === 'image') setPreview(t);
+            else if (!t) setPreview(null);
+          }}
+          onPaste={e => void handleClipboardData(e.nativeEvent)}
+        />
+
+        <div className="add-media-or">OR</div>
+
+        <button type="button" className="editor-save-btn add-media-upload-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+          <Upload size={16} /> Upload file from computer
+        </button>
+        <input ref={fileInputRef} type="file" hidden accept="image/*,application/pdf,.pdf" onChange={e => void handleFile(e.target.files?.[0])} />
+
+        <div className="add-media-actions">
+          <button type="button" className="editor-save-btn add-media-cancel" onClick={onClose}>Cancel</button>
+          <button type="button" className="editor-save-btn" onClick={submit} disabled={!url.trim() || uploading}>Add to Board</button>
+        </div>
+      </div>
+    </div>
+  );
+}

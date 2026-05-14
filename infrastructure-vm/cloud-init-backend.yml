@@ -1,0 +1,16 @@
+#cloud-config
+package_upgrade: true
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - postgresql-client
+  - build-essential
+  - pkg-config
+  - libssl-dev
+runcmd:
+  # Install Rust (in case user wants to compile directly on the VM, though SCP is recommended)
+  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  # Ensure the data directory exists for media uploads
+  - mkdir -p /var/www/cardcanvas-backend/uploads
+  - chown -R azureuser:azureuser /var/www/cardcanvas-backend
