@@ -1,4 +1,3 @@
-pub mod media_routes;
 pub mod health;
 
 use axum::Router;
@@ -10,6 +9,6 @@ pub fn api_router() -> Router<AppState> {
         .nest("/workspace", crate::domain::workspaces::routes::router())
         .nest("/cards", crate::domain::cards::routes::router())
         .nest("/whiteboard", crate::domain::whiteboards::routes::router())
-        .nest("/media", media_routes::router())
+        .nest("/media", crate::domain::media::routes::router())
         .nest("/health", health::router())
 }

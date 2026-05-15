@@ -6,7 +6,7 @@ use axum::{
 use uuid::Uuid;
 
 use crate::{
-    auth::AuthUser,
+    infrastructure::auth::AuthUser,
     errors::{AppError, Result},
     state::AppState,
 };

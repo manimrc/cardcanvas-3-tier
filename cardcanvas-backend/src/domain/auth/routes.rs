@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use super::{models::*, service::AuthService};
 use crate::{
-    auth::AuthUser,
+    infrastructure::auth::AuthUser,
     errors::{AppError, Result},
     state::AppState,
 };

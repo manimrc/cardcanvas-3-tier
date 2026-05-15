@@ -1,10 +1,9 @@
 mod db;
 mod errors;
-mod models;
 mod routes;
-mod auth;
 mod state;
 mod domain;
+mod infrastructure;
 
 use axum::{Router, http::Method};
 use tower_http::cors::{CorsLayer, Any};

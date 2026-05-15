@@ -4,16 +4,16 @@ use crate::domain::auth::{repository::AuthRepository, service::AuthService};
 use crate::domain::cards::{repository::CardRepository, service::CardService};
 use crate::domain::workspaces::{repository::WorkspaceRepository, service::WorkspaceService};
 use crate::domain::whiteboards::{repository::WhiteboardRepository, service::WhiteboardService};
+use crate::domain::media::{repository::MediaRepository, service::MediaService};
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: PgPool, // Keeping db for other routes that aren't migrated yet
     pub jwt_secret: String,
-    pub media_dir: String,
     pub auth_service: Arc<AuthService>,
     pub card_service: Arc<CardService>,
     pub workspace_service: Arc<WorkspaceService>,
     pub whiteboard_service: Arc<WhiteboardService>,
+    pub media_service: Arc<MediaService>,
 }
 
 impl AppState {
@@ -35,14 +35,16 @@ impl AppState {
         let whiteboard_repo = WhiteboardRepository::new(db.clone());
         let whiteboard_service = Arc::new(WhiteboardService::new(whiteboard_repo));
 
+        let media_repo = MediaRepository::new(db.clone());
+        let media_service = Arc::new(MediaService::new(media_repo, media_dir));
+
         Self {
-            db,
             jwt_secret,
-            media_dir,
             auth_service,
             card_service,
             workspace_service,
             whiteboard_service,
+            media_service,
         }
     }
 }

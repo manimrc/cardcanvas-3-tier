@@ -2,7 +2,7 @@ use rand::Rng;
 use uuid::Uuid;
 use super::{models::*, repository::AuthRepository};
 use crate::errors::{AppError, Result};
-use crate::auth::create_token;
+use crate::infrastructure::auth::create_token;
 
 pub struct AuthService {
     repo: AuthRepository,

@@ -1,45 +1,37 @@
-# CardCanvas
+# CardCanvas Frontend
 
-CardCanvas is a modern, 3-tier enterprise visual workspace for organizing cards, notes, links, and media on an infinite canvas.
+This is the Next.js frontend for CardCanvas, serving a modern, glassmorphic visual workspace.
 
-## Architecture
+## Tech Stack
+- **Framework**: Next.js 16 (Standalone output mode)
+- **Styling**: Vanilla CSS with CSS Variables for theme management.
+- **State Management**: React Context & Hooks.
+- **Canvas Rendering**: Custom absolute positioning with drag-and-drop.
 
-CardCanvas has evolved from a local-first desktop application into a fully cloud-native web application:
+## Development
 
-1. **Frontend**: Next.js 16 (React) application serving a dynamic, glassmorphic UI.
-2. **Backend**: High-performance Rust API using the Axum framework and SQLx.
-3. **Database**: PostgreSQL (managed via Azure PostgreSQL Flexible Server in production).
-4. **Storage**: Local multipart uploads (ready to be swapped for Azure Blob Storage).
+### Requirements
+- Node.js 20+
+- npm
 
-## Getting Started Locally
+### Local Setup
+1.  Install dependencies:
+    ```bash
+    npm install
+    ```
+2.  Set up environment variables in `.env.local`:
+    ```env
+    NEXT_PUBLIC_API_URL=http://localhost:8080
+    ```
+3.  Start the development server:
+    ```bash
+    npm run dev
+    ```
 
-You can run the entire 3-tier architecture locally using Docker Compose. 
-Ensure you have [Docker](https://www.docker.com/) installed.
+## Project Structure
+- `/src/components`: Reusable UI components (Cards, Canvas, Sidebar).
+- `/src/app`: Next.js App Router pages and layouts.
+- `/public`: Static assets.
 
-```bash
-# Clone the repository
-git clone https://github.com/your-org/cardcanvas.git
-cd cardcanvas
+For the full 3-tier architecture and deployment instructions, please refer to the [Root README](../README.md).
 
-# Start the environment (Frontend, Rust Backend, PostgreSQL)
-docker compose up --build -d
-```
-
-Once the containers are running:
-- **Frontend App**: [http://localhost:3000](http://localhost:3000)
-- **Rust Backend API**: [http://localhost:8080](http://localhost:8080) (Proxied automatically via `/api/*` from the frontend)
-
-## Deployment
-
-To deploy the application to a production environment (Microsoft Azure), please see our primary [VM Deployment Guide](DEPLOYMENT_VM.md).
-
-The VM deployment guide covers:
-- Provisioning infrastructure using Terraform (VNet, Azure VMs, Azure PostgreSQL Flexible Server).
-- Deploying the Node.js frontend using PM2 and Nginx.
-- Deploying the Rust backend as a Systemd service.
-
-Alternatively, if you prefer deploying using Docker and Azure Container Registry, you can follow the [Docker Deployment Guide](DEPLOYMENT.md).
-
-## License
-
-MIT License
