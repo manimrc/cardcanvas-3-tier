@@ -4,6 +4,7 @@ mod models;
 mod routes;
 mod auth;
 mod state;
+mod domain;
 
 use axum::{Router, http::Method};
 use tower_http::cors::{CorsLayer, Any};

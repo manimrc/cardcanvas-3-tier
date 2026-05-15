@@ -8,9 +8,9 @@ use uuid::Uuid;
 use crate::{
     auth::AuthUser,
     errors::{AppError, Result},
-    models::*,
     state::AppState,
 };
+use super::models::*;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -23,14 +23,7 @@ async fn get_whiteboard(
     Path(board_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    let row: Option<Whiteboard> = sqlx::query_as(
-        "SELECT board_id, user_id, elements, app_state, updated_at FROM whiteboard WHERE board_id = $1 AND user_id = $2"
-    )
-    .bind(board_id)
-    .bind(uid)
-    .fetch_optional(&state.db)
-    .await?;
+    let row = state.whiteboard_service.get_whiteboard(uid, board_id).await?;
 
     match row {
         Some(r) => Ok(Json(serde_json::json!({
@@ -51,19 +44,6 @@ async fn update_whiteboard(
     Json(req): Json<UpdateWhiteboardRequest>,
 ) -> Result<Json<serde_json::Value>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    sqlx::query(
-        r#"INSERT INTO whiteboard (board_id, user_id, elements, app_state, updated_at)
-           VALUES ($1, $2, $3, $4, NOW())
-           ON CONFLICT (board_id) DO UPDATE
-           SET elements = EXCLUDED.elements, app_state = EXCLUDED.app_state, updated_at = NOW()"#
-    )
-    .bind(board_id)
-    .bind(uid)
-    .bind(&req.elements)
-    .bind(&req.app_state)
-    .execute(&state.db)
-    .await?;
-
+    state.whiteboard_service.update_whiteboard(uid, board_id, req).await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }

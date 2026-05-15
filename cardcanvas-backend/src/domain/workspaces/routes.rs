@@ -8,9 +8,9 @@ use uuid::Uuid;
 use crate::{
     auth::AuthUser,
     errors::{AppError, Result},
-    models::*,
     state::AppState,
 };
+use super::models::*;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -26,22 +26,8 @@ async fn get_tree(
     State(state): State<AppState>,
 ) -> Result<Json<WorkspaceTree>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    let folders: Vec<Folder> = sqlx::query_as(
-        "SELECT id, user_id, name, created_at FROM folders WHERE user_id = $1 ORDER BY name"
-    )
-    .bind(uid)
-    .fetch_all(&state.db)
-    .await?;
-
-    let boards: Vec<Board> = sqlx::query_as(
-        "SELECT id, user_id, folder_id, name, created_at FROM boards WHERE user_id = $1 ORDER BY name"
-    )
-    .bind(uid)
-    .fetch_all(&state.db)
-    .await?;
-
-    Ok(Json(WorkspaceTree { folders, boards }))
+    let tree = state.workspace_service.get_tree(uid).await?;
+    Ok(Json(tree))
 }
 
 async fn create_folder(
@@ -50,15 +36,7 @@ async fn create_folder(
     Json(req): Json<CreateFolderRequest>,
 ) -> Result<Json<Folder>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    let folder: Folder = sqlx::query_as(
-        "INSERT INTO folders (user_id, name) VALUES ($1, $2) RETURNING id, user_id, name, created_at"
-    )
-    .bind(uid)
-    .bind(&req.name)
-    .fetch_one(&state.db)
-    .await?;
-
+    let folder = state.workspace_service.create_folder(uid, req).await?;
     Ok(Json(folder))
 }
 
@@ -69,14 +47,7 @@ async fn rename_folder(
     Json(req): Json<RenameFolderRequest>,
 ) -> Result<Json<serde_json::Value>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    sqlx::query("UPDATE folders SET name = $1 WHERE id = $2 AND user_id = $3")
-        .bind(&req.name)
-        .bind(id)
-        .bind(uid)
-        .execute(&state.db)
-        .await?;
-
+    state.workspace_service.rename_folder(uid, id, req).await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
@@ -86,13 +57,7 @@ async fn delete_folder(
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    sqlx::query("DELETE FROM folders WHERE id = $1 AND user_id = $2")
-        .bind(id)
-        .bind(uid)
-        .execute(&state.db)
-        .await?;
-
+    state.workspace_service.delete_folder(uid, id).await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
@@ -102,17 +67,7 @@ async fn create_board(
     Json(req): Json<CreateBoardRequest>,
 ) -> Result<Json<Board>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    let board: Board = sqlx::query_as(
-        "INSERT INTO boards (user_id, folder_id, name) VALUES ($1, $2, $3)
-         RETURNING id, user_id, folder_id, name, created_at"
-    )
-    .bind(uid)
-    .bind(req.folder_id)
-    .bind(&req.name)
-    .fetch_one(&state.db)
-    .await?;
-
+    let board = state.workspace_service.create_board(uid, req).await?;
     Ok(Json(board))
 }
 
@@ -123,15 +78,7 @@ async fn rename_board(
     Json(req): Json<RenameBoardRequest>,
 ) -> Result<Json<serde_json::Value>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    sqlx::query("UPDATE boards SET name = $1, folder_id = $2 WHERE id = $3 AND user_id = $4")
-        .bind(&req.name)
-        .bind(req.folder_id)
-        .bind(id)
-        .bind(uid)
-        .execute(&state.db)
-        .await?;
-
+    state.workspace_service.rename_board(uid, id, req).await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
@@ -141,12 +88,6 @@ async fn delete_board(
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
-
-    sqlx::query("DELETE FROM boards WHERE id = $1 AND user_id = $2")
-        .bind(id)
-        .bind(uid)
-        .execute(&state.db)
-        .await?;
-
+    state.workspace_service.delete_board(uid, id).await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }
