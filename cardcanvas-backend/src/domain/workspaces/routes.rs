@@ -6,7 +6,7 @@ use axum::{
 use uuid::Uuid;
 
 use crate::{
-    infrastructure::auth::AuthUser,
+    infrastructure::{auth::AuthUser, validation::ValidatedJson},
     errors::{AppError, Result},
     state::AppState,
 };
@@ -33,7 +33,7 @@ async fn get_tree(
 async fn create_folder(
     AuthUser(claims): AuthUser,
     State(state): State<AppState>,
-    Json(req): Json<CreateFolderRequest>,
+    ValidatedJson(req): ValidatedJson<CreateFolderRequest>,
 ) -> Result<Json<Folder>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
     let folder = state.workspace_service.create_folder(uid, req).await?;
@@ -44,7 +44,7 @@ async fn rename_folder(
     AuthUser(claims): AuthUser,
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-    Json(req): Json<RenameFolderRequest>,
+    ValidatedJson(req): ValidatedJson<RenameFolderRequest>,
 ) -> Result<Json<serde_json::Value>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
     state.workspace_service.rename_folder(uid, id, req).await?;
@@ -64,7 +64,7 @@ async fn delete_folder(
 async fn create_board(
     AuthUser(claims): AuthUser,
     State(state): State<AppState>,
-    Json(req): Json<CreateBoardRequest>,
+    ValidatedJson(req): ValidatedJson<CreateBoardRequest>,
 ) -> Result<Json<Board>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
     let board = state.workspace_service.create_board(uid, req).await?;
@@ -75,7 +75,7 @@ async fn rename_board(
     AuthUser(claims): AuthUser,
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-    Json(req): Json<RenameBoardRequest>,
+    ValidatedJson(req): ValidatedJson<RenameBoardRequest>,
 ) -> Result<Json<serde_json::Value>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
     state.workspace_service.rename_board(uid, id, req).await?;

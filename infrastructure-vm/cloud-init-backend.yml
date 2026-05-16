@@ -9,8 +9,10 @@ packages:
   - pkg-config
   - libssl-dev
 runcmd:
-  # Install Rust (in case user wants to compile directly on the VM, though SCP is recommended)
+  # Install Rust (in case user wants to compile directly on the VM)
   - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  # Ensure the data directory exists for media uploads
+  # Setup application and log directories
   - mkdir -p /var/www/cardcanvas-backend/uploads
+  - mkdir -p /var/log/cardcanvas-backend
   - chown -R azureuser:azureuser /var/www/cardcanvas-backend
+  - chown -R azureuser:azureuser /var/log/cardcanvas-backend

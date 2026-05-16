@@ -1,0 +1,18 @@
+[Unit]
+Description=CardCanvas Rust Backend
+After=network.target
+
+[Service]
+User=azureuser
+Group=azureuser
+WorkingDirectory=/var/www/cardcanvas-backend
+# Load environment variables from a secure file
+EnvironmentFile=/var/www/cardcanvas-backend/.env
+ExecStart=/var/www/cardcanvas-backend/cardcanvas-backend
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/cardcanvas-backend/out.log
+StandardError=append:/var/log/cardcanvas-backend/err.log
+
+[Install]
+WantedBy=multi-user.target

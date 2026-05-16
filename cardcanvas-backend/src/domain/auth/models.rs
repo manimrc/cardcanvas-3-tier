@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+use validator::Validate;
+
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
 pub struct User {
     pub id: Uuid,
@@ -15,10 +17,13 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct RegisterRequest {
+    #[validate(length(min = 3, max = 50))]
     pub username: String,
+    #[validate(length(min = 8))]
     pub password: String,
+    #[validate(length(max = 100))]
     pub display_name: Option<String>,
 }
 
@@ -29,15 +34,19 @@ pub struct AuthResponse {
     pub display_name: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct LoginRequest {
+    #[validate(length(min = 1))]
     pub username: String,
+    #[validate(length(min = 1))]
     pub password: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct ResetPasswordRequest {
+    #[validate(length(min = 1))]
     pub username: String,
     pub recovery_code: String,
+    #[validate(length(min = 8))]
     pub new_password: String,
 }

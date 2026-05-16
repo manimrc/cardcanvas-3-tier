@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+use validator::Validate;
+
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
 pub struct Folder {
     pub id: Uuid,
@@ -20,24 +22,28 @@ pub struct Board {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct CreateFolderRequest {
+    #[validate(length(min = 1, max = 100))]
     pub name: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct RenameFolderRequest {
+    #[validate(length(min = 1, max = 100))]
     pub name: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct CreateBoardRequest {
+    #[validate(length(min = 1, max = 100))]
     pub name: String,
     pub folder_id: Option<Uuid>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct RenameBoardRequest {
+    #[validate(length(min = 1, max = 100))]
     pub name: String,
     pub folder_id: Option<Uuid>,
 }

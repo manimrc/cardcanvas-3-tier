@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use super::{models::*, service::AuthService};
 use crate::{
-    infrastructure::auth::AuthUser,
+    infrastructure::{auth::AuthUser, validation::ValidatedJson},
     errors::{AppError, Result},
     state::AppState,
 };
@@ -25,7 +25,7 @@ pub fn router() -> Router<AppState> {
 
 async fn register(
     State(state): State<AppState>,
-    Json(req): Json<RegisterRequest>,
+    ValidatedJson(req): ValidatedJson<RegisterRequest>,
 ) -> Result<impl IntoResponse> {
     let (user, token, recovery_code) = state.auth_service.register(req).await?;
 
@@ -52,7 +52,7 @@ async fn register(
 
 async fn login(
     State(state): State<AppState>,
-    Json(req): Json<LoginRequest>,
+    ValidatedJson(req): ValidatedJson<LoginRequest>,
 ) -> Result<impl IntoResponse> {
     let (user, token) = state.auth_service.login(req).await?;
 
@@ -99,7 +99,7 @@ async fn me(
 
 async fn reset_password(
     State(state): State<AppState>,
-    Json(req): Json<ResetPasswordRequest>,
+    ValidatedJson(req): ValidatedJson<ResetPasswordRequest>,
 ) -> Result<Json<serde_json::Value>> {
     state.auth_service.reset_password(req).await?;
     Ok(Json(serde_json::json!({ "success": true })))

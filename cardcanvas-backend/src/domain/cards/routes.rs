@@ -7,7 +7,7 @@ use axum::{
 use uuid::Uuid;
 
 use crate::{
-    infrastructure::auth::AuthUser,
+    infrastructure::{auth::AuthUser, validation::ValidatedJson},
     errors::{AppError, Result},
     state::AppState,
 };
@@ -42,7 +42,7 @@ async fn get_all_cards(
 async fn create_card(
     AuthUser(claims): AuthUser,
     State(state): State<AppState>,
-    Json(req): Json<CreateCardRequest>,
+    ValidatedJson(req): ValidatedJson<CreateCardRequest>,
 ) -> Result<(StatusCode, Json<Card>)> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
     let card = state.card_service.create_card(uid, req).await?;
@@ -53,7 +53,7 @@ async fn update_card(
     AuthUser(claims): AuthUser,
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-    Json(req): Json<UpdateCardRequest>,
+    ValidatedJson(req): ValidatedJson<UpdateCardRequest>,
 ) -> Result<Json<Card>> {
     let uid: Uuid = claims.sub.parse().map_err(|_| AppError::Unauthorized)?;
     let card = state.card_service.update_card(uid, id, req).await?;

@@ -52,9 +52,11 @@ docker compose up --build -d
 
 ## Deployment
 
-We support two primary deployment paths to Microsoft Azure:
-1.  **Docker Deployment**: See [DEPLOYMENT.md](DEPLOYMENT.md) (Azure ACR + Azure VM).
-2.  **Bare-Metal VM Deployment**: See [DEPLOYMENT_VM.md](DEPLOYMENT_VM.md) (Nginx + PM2 + Systemd).
+We support multiple deployment strategies to Microsoft Azure, including Manual Bare-Metal, Dockerized, and Fully Automated pipelines.
+
+For detailed instructions on why and how to deploy, see our master guide:
+
+👉 **[The Full Deployment Guide](FULL_DEPLOYMENT_GUIDE.md)** 👈
 
 ## License
 

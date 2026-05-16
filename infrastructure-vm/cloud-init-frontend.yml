@@ -5,12 +5,17 @@ packages:
   - ca-certificates
   - curl
   - nginx
+  - certbot
+  - python3-certbot-nginx
 runcmd:
   # Install Node.js 20.x
   - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   - apt-get install -y nodejs
   # Install PM2 globally
   - npm install -g pm2
+  # Setup application directory
+  - mkdir -p /var/www/cardcanvas-frontend
+  - chown -R azureuser:azureuser /var/www/cardcanvas-frontend
   # Start Nginx
   - systemctl enable nginx
   - systemctl start nginx

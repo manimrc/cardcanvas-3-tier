@@ -24,6 +24,9 @@ pub enum AppError {
 
     #[error("Database error")]
     Database(#[from] sqlx::Error),
+
+    #[error("Validation error: {0}")]
+    Validation(#[from] validator::ValidationErrors),
 }
 
 impl IntoResponse for AppError {
@@ -41,6 +44,7 @@ impl IntoResponse for AppError {
                 tracing::error!("Database error: {:?}", e);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
             }
+            AppError::Validation(e) => (StatusCode::BAD_REQUEST, format!("Validation error: {}", e)),
         };
 
         (status, Json(json!({ "error": message }))).into_response()

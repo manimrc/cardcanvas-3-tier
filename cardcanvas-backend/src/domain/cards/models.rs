@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+use validator::Validate;
+
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
 pub struct Card {
     pub id: Uuid,
@@ -31,13 +33,15 @@ pub struct CardQuery {
     pub board_id: Option<Uuid>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct CreateCardRequest {
     pub id: Option<Uuid>,
     pub board_id: Uuid,
     #[serde(rename = "type")]
+    #[validate(length(min = 1))]
     pub card_type: String,
     pub title: Option<String>,
+    #[validate(url)]
     pub url: Option<String>,
     pub content: Option<String>,
     pub x: f64,
@@ -49,9 +53,10 @@ pub struct CreateCardRequest {
     pub is_locked: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct UpdateCardRequest {
     pub title: Option<String>,
+    #[validate(url)]
     pub url: Option<String>,
     pub content: Option<String>,
     pub x: Option<f64>,
