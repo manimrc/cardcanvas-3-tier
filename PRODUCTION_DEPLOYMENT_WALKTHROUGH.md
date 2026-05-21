@@ -81,7 +81,7 @@ Before you start clicking, understand the "Wiring":
 
 ## ⚛️ Step 6: Frontend Deployment
 1.  **Build**:
-    - `cd cardcanvas-v3`
+    - `cd cardcanvas-frontend`
     - Update `.env.production` -> `NEXT_PUBLIC_API_URL=http://<BACKEND_IP>:8080`.
     - `npm run build`.
 2.  **Transfer**: Bundle `.next/standalone` into a tarball and `scp` to Frontend VM.

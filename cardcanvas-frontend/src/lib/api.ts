@@ -4,7 +4,11 @@
  * Credentials (httpOnly cookie) are forwarded automatically via credentials: 'include'.
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const BASE_URL = typeof window !== 'undefined'
+  ? ((window.location.protocol === 'tauri:' || (window as any).__TAURI_INTERNALS__ !== undefined)
+      ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080')
+      : '')
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080');
 
 async function request<T>(
   path: string,
@@ -169,5 +173,31 @@ export const api = {
 
       return res.json();
     },
+  },
+
+  // ---- Journal ----
+
+  journal: {
+    getEntry: (date: string) =>
+      request<import('@/types').JournalEntry | null>(`/api/journal/${date}`),
+
+    saveEntry: (date: string, data: Partial<import('@/types').JournalEntry>) =>
+      request<import('@/types').JournalEntry>(`/api/journal/${date}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    deleteEntry: (date: string) =>
+      request<{ success: boolean }>(`/api/journal/${date}`, { method: 'DELETE' }),
+
+    getRange: (start: string, end: string) =>
+      request<import('@/types').JournalEntry[]>(
+        `/api/journal/range?start=${start}&end=${end}`
+      ),
+
+    getHeatmap: (year: number) =>
+      request<import('@/types').EmotionalHeatmapEntry[]>(
+        `/api/journal/heatmap/${year}`
+      ),
   },
 };

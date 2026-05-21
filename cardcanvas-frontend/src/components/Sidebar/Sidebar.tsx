@@ -1,9 +1,15 @@
 'use client';
+import { useState, useEffect, useCallback } from 'react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { Folder, Board } from '@/types';
+import type { EmotionalHeatmapEntry } from '@/types';
 import FileTree from './FileTree';
-import { PanelLeftClose, LogOut } from 'lucide-react';
+import JournalCalendar from '../Journal/JournalCalendar';
+import JournalHeatmap from '../Journal/JournalHeatmap';
+import { api } from '@/lib/api';
+import { PanelLeftClose, LogOut, BarChart3, Folder as FolderIcon, Tag as TagIcon, Presentation, BookOpen } from 'lucide-react';
 
-export type SidebarView = 'workspaces' | 'tags' | 'whiteboard';
+export type SidebarView = 'workspaces' | 'tags' | 'whiteboard' | 'journal';
 
 interface TagEntry {
   key: string;
@@ -37,9 +43,48 @@ interface Props {
   onClearTagSelection: () => void;
   user?: UserInfo | null;
   onLogout?: () => void;
+  // Journal props
+  journalDate?: Date;
+  onJournalDateChange?: (date: Date) => void;
 }
 
 export default function Sidebar(props: Props) {
+  const [heatmapVisible, setHeatmapVisible] = useState(false);
+  const [heatmapData, setHeatmapData] = useState<EmotionalHeatmapEntry[]>([]);
+  const [entryDates, setEntryDates] = useState<Set<string>>(new Set());
+  const [entryMoods, setEntryMoods] = useState<Record<string, string>>({});
+  const currentYear = new Date().getFullYear();
+
+  // Load calendar dots + heatmap data when journal view is active
+  useEffect(() => {
+    if (props.view !== 'journal' || !props.user) return;
+    const journalDate = props.journalDate ?? new Date();
+    const monthStart = format(startOfMonth(journalDate), 'yyyy-MM-dd');
+    const monthEnd = format(endOfMonth(journalDate), 'yyyy-MM-dd');
+
+    // Fetch entries for the visible month (for calendar dots)
+    api.journal.getRange(monthStart, monthEnd)
+      .then(entries => {
+        const dates = new Set<string>();
+        const moods: Record<string, string> = {};
+        for (const e of entries) {
+          dates.add(e.entry_date);
+          if (e.mood) moods[e.entry_date] = e.mood;
+        }
+        setEntryDates(dates);
+        setEntryMoods(moods);
+      })
+      .catch(err => console.error('Failed to load journal dates:', err));
+  }, [props.view, props.user, props.journalDate]);
+
+  // Load heatmap data when toggled
+  useEffect(() => {
+    if (!heatmapVisible || props.view !== 'journal' || !props.user) return;
+    api.journal.getHeatmap(currentYear)
+      .then(setHeatmapData)
+      .catch(err => console.error('Failed to load heatmap:', err));
+  }, [heatmapVisible, props.view, props.user, currentYear]);
+
   return (
     <aside className={`sidebar${props.collapsed ? ' collapsed' : ''}`}>
       <div className="sidebar-header">
@@ -62,22 +107,37 @@ export default function Sidebar(props: Props) {
           type="button"
           className={`sidebar-mode-tab${props.view === 'workspaces' ? ' active' : ''}`}
           onClick={() => props.onViewChange('workspaces')}
+          title="Workspaces"
         >
-          Workspaces
+          <FolderIcon size={14} />
+          <span className="sidebar-tab-label">Workspaces</span>
         </button>
         <button
           type="button"
           className={`sidebar-mode-tab${props.view === 'tags' ? ' active' : ''}`}
           onClick={() => props.onViewChange('tags')}
+          title="Tags"
         >
-          Tags
+          <TagIcon size={14} />
+          <span className="sidebar-tab-label">Tags</span>
         </button>
         <button
           type="button"
           className={`sidebar-mode-tab${props.view === 'whiteboard' ? ' active' : ''}`}
           onClick={() => props.onViewChange('whiteboard')}
+          title="Whiteboard"
         >
-          Whiteboard
+          <Presentation size={14} />
+          <span className="sidebar-tab-label">Whiteboard</span>
+        </button>
+        <button
+          type="button"
+          className={`sidebar-mode-tab${props.view === 'journal' ? ' active' : ''} sidebar-mode-tab-journal`}
+          onClick={() => props.onViewChange('journal')}
+          title="Journal"
+        >
+          <BookOpen size={14} />
+          <span className="sidebar-tab-label">Journal</span>
         </button>
       </div>
 
@@ -110,6 +170,28 @@ export default function Sidebar(props: Props) {
               )}
             </>
           )}
+        </div>
+      ) : props.view === 'journal' ? (
+        <div className="sidebar-content sidebar-journal-panel">
+          <JournalCalendar
+            selectedDate={props.journalDate ?? new Date()}
+            onSelectDate={d => props.onJournalDateChange?.(d)}
+            entryDates={entryDates}
+            entryMoods={entryMoods}
+          />
+          <button
+            type="button"
+            className="journal-heatmap-toggle"
+            onClick={() => setHeatmapVisible(!heatmapVisible)}
+          >
+            <BarChart3 size={13} />
+            {heatmapVisible ? 'Hide' : 'Show'} Emotional Heatmap
+          </button>
+          <JournalHeatmap
+            year={currentYear}
+            data={heatmapData}
+            visible={heatmapVisible}
+          />
         </div>
       ) : props.view === 'whiteboard' ? (
         null

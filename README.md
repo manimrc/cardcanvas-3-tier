@@ -15,7 +15,7 @@ The project is organized as a **Domain-Driven Modular Monolith**, ensuring long-
 
 ```text
 .
-├── cardcanvas-v3/          # Frontend (Next.js)
+├── cardcanvas-frontend/    # Frontend (Next.js)
 ├── cardcanvas-backend/     # Backend (Rust / Axum)
 │   ├── src/
 │   │   ├── domain/         # Business Domains (Auth, Cards, Workspaces, etc.)

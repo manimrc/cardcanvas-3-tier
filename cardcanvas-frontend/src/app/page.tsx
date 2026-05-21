@@ -10,6 +10,7 @@ import TagGridView from '@/components/Canvas/TagGridView';
 import RichTextEditor from '@/components/Editor/RichTextEditor';
 import AddMediaModal from '@/components/AddMediaModal';
 import WhiteboardView from '@/components/Whiteboard/WhiteboardView';
+import JournalView from '@/components/Journal/JournalView';
 import { collectGlobalTagEntries, cardMatchesSelectedTags } from '@/lib/hashtags';
 import { inferMediaType } from '@/lib/mediaType';
 import { findNonOverlappingPosition } from '@/lib/collision';
@@ -41,6 +42,7 @@ export default function Home() {
   const [mediaModalOpen, setMediaModalOpen] = useState(false);
   const [isLightMode, setIsLightMode] = useState(() => readStorage('cc_isLightMode', true));
   const [searchQuery, setSearchQuery] = useState('');
+  const [journalDate, setJournalDate] = useState(() => new Date());
 
   const handleLogout = useCallback(() => { logout(); }, [logout]);
 
@@ -87,6 +89,8 @@ export default function Home() {
         if (!activeBoardIdRef.current || !data.boards.some((b: Board) => b.id === activeBoardIdRef.current)) {
           setActiveBoardId(data.boards[0].id);
         }
+      } else {
+        setActiveBoardId(null);
       }
     } catch (err) {
       console.error('Failed to fetch tree:', err);
@@ -290,6 +294,7 @@ export default function Home() {
   }
 
   const isWhiteboard = sidebarView === 'whiteboard';
+  const isJournal = sidebarView === 'journal';
   const tagsToolbar = sidebarView === 'tags';
 
   return (
@@ -318,10 +323,12 @@ export default function Home() {
         onClearTagSelection={() => setSelectedTagKeys([])}
         user={user}
         onLogout={handleLogout}
+        journalDate={journalDate}
+        onJournalDateChange={setJournalDate}
       />
 
       <div className="main-area">
-        {!isWhiteboard && (
+        {!isWhiteboard && !isJournal && (
           <Toolbar
             mode={tagsToolbar ? 'tags' : 'workspace'}
             boardName={activeBoard?.name || ''}
@@ -349,8 +356,23 @@ export default function Home() {
           </button>
         )}
 
-        {isWhiteboard ? (
-          <WhiteboardView isLightMode={isLightMode} boardId={activeBoardId || 'global'} />
+        {isJournal && sidebarCollapsed && (
+          <button type="button" className="whiteboard-sidebar-toggle" onClick={() => setSidebarCollapsed(false)} title="Open sidebar">
+            <PanelLeft size={18} />
+          </button>
+        )}
+
+        {isJournal ? (
+          <JournalView selectedDate={journalDate} isLightMode={isLightMode} />
+        ) : isWhiteboard ? (
+          activeBoardId ? (
+            <WhiteboardView isLightMode={isLightMode} boardId={activeBoardId} />
+          ) : (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 48 }}>🎨</div>
+              <div style={{ fontSize: 16, fontWeight: 500 }}>Select or create a board to use the whiteboard</div>
+            </div>
+          )
         ) : sidebarView === 'tags' ? (
           <TagGridView
             cards={filteredTagCards}

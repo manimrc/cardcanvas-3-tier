@@ -43,7 +43,7 @@ services:
   # ─── Tier 1: Next.js Frontend ──────────────────────────────────────────────
   frontend:
     build:
-      context: ./cardcanvas-v3
+      context: ./cardcanvas-frontend
       dockerfile: Dockerfile
     container_name: cc-frontend
     restart: unless-stopped

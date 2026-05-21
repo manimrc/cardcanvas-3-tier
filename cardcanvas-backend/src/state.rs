@@ -5,6 +5,7 @@ use crate::domain::cards::{repository::CardRepository, service::CardService};
 use crate::domain::workspaces::{repository::WorkspaceRepository, service::WorkspaceService};
 use crate::domain::whiteboards::{repository::WhiteboardRepository, service::WhiteboardService};
 use crate::domain::media::{repository::MediaRepository, service::MediaService};
+use crate::domain::journal::{repository::JournalRepository, service::JournalService};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -14,6 +15,7 @@ pub struct AppState {
     pub workspace_service: Arc<WorkspaceService>,
     pub whiteboard_service: Arc<WhiteboardService>,
     pub media_service: Arc<MediaService>,
+    pub journal_service: Arc<JournalService>,
 }
 
 impl AppState {
@@ -38,6 +40,9 @@ impl AppState {
         let media_repo = MediaRepository::new(db.clone());
         let media_service = Arc::new(MediaService::new(media_repo, media_dir));
 
+        let journal_repo = JournalRepository::new(db.clone());
+        let journal_service = Arc::new(JournalService::new(journal_repo));
+
         Self {
             jwt_secret,
             auth_service,
@@ -45,6 +50,7 @@ impl AppState {
             workspace_service,
             whiteboard_service,
             media_service,
+            journal_service,
         }
     }
 }

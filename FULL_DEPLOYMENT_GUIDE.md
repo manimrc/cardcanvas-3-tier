@@ -33,7 +33,7 @@ In development, we use "Hot Reloading" which is fast for coding but heavy. In pr
 5.  **Execution**: Test the production binary locally with `./target/release/cardcanvas-backend`.
 
 #### Frontend (Next.js):
-1.  **Navigate**: `cd cardcanvas-v3`.
+1.  **Navigate**: `cd cardcanvas-frontend`.
 2.  **Environment Setup**: Create a `.env.production` file and set `NEXT_PUBLIC_API_URL=http://localhost:8080`.
 3.  **Dependency Install**: `npm install`. This populates the `node_modules` folder.
 4.  **The Build**: `npm run build`. This triggers `next build` which performs tree-shaking (removing unused code) and image optimization.

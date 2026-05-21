@@ -10,5 +10,6 @@ pub fn api_router() -> Router<AppState> {
         .nest("/cards", crate::domain::cards::routes::router())
         .nest("/whiteboard", crate::domain::whiteboards::routes::router())
         .nest("/media", crate::domain::media::routes::router())
+        .nest("/journal", crate::domain::journal::routes::router())
         .nest("/health", health::router())
 }

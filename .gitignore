@@ -56,3 +56,17 @@ terraform.rc
 .vscode/
 *.swp
 *.swo
+
+# Archives and build artifacts
+*.tar.gz
+*.zip
+*.tgz
+*.rar
+*.tar
+target/
+dist/
+build/
+.next/
+node_modules/
+*.log
+

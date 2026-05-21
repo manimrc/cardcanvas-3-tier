@@ -31,6 +31,8 @@ const ExcalidrawWrapper = dynamic(
 
 import '@excalidraw/excalidraw/index.css';
 
+const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 export default function WhiteboardView({ isLightMode, boardId = 'global' }: { isLightMode?: boolean; boardId?: string }) {
   const { user } = useAuth();
   const [initialData, setInitialData] = useState<WhiteboardScene | null>(null);
@@ -39,7 +41,7 @@ export default function WhiteboardView({ isLightMode, boardId = 'global' }: { is
   const onChangeRef = useRef<((elements: readonly ExcalidrawElement[], appState: AppState) => void) | null>(null);
 
   const saveContent = useCallback(async (elements: readonly ExcalidrawElement[], appState: AppState) => {
-    if (!user) return;
+    if (!user || !isUuid(boardId)) return;
     try {
       await api.whiteboard.update(boardId, elements, { viewBackgroundColor: appState.viewBackgroundColor });
     } catch (err) {
@@ -55,10 +57,21 @@ export default function WhiteboardView({ isLightMode, boardId = 'global' }: { is
   }, [saveContent]);
 
   useEffect(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
     if (!user) return;
     let cancelled = false;
     setLoaded(false);
     setInitialData(null);
+
+    if (!isUuid(boardId)) {
+      setInitialData({ elements: [], appState: {} });
+      setLoaded(true);
+      return;
+    }
 
     api.whiteboard.get(boardId)
       .then(data => {
@@ -79,8 +92,18 @@ export default function WhiteboardView({ isLightMode, boardId = 'global' }: { is
         setLoaded(true);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user, boardId]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
