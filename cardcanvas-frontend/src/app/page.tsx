@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/components/AuthContext';
 import { api } from '@/lib/api';
-import { Card, Board, Folder } from '@/types';
+import { Card, Board, Folder, CardType } from '@/types';
 import Sidebar, { type SidebarView } from '@/components/Sidebar/Sidebar';
 import Toolbar from '@/components/Toolbar/Toolbar';
 import InfiniteCanvas, { type InfiniteCanvasHandle } from '@/components/Canvas/InfiniteCanvas';
@@ -150,7 +150,7 @@ export default function Home() {
     if (!user || !activeBoardId) return;
 
     const defaults: Record<string, Partial<Card>> = {
-      richtext: { title: 'New Note', content: '<p>Start typing...</p>', color: '#FFF9C4' },
+      richtext: { title: 'New Note', content: '', color: '#FFF9C4' },
       link:     { title: 'New Link', content: '<p>Paste a URL here</p>', color: '#BBDEFB' },
       image:    { title: 'New Image', content: '<p>Add an image URL</p>', color: '#C8E6C9' },
       pdf:      { title: 'PDF Document', content: '', color: '#FFE0B2' },
@@ -167,7 +167,7 @@ export default function Home() {
       const card = await api.cards.create({
         id: crypto.randomUUID(),
         board_id: activeBoardId,
-        type: type as any,
+        type: type as CardType,
         x: resolved.x,
         y: resolved.y,
         width: w,

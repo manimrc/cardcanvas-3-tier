@@ -83,6 +83,14 @@ impl JournalRepository {
         .fetch_one(&self.pool)
         .await?;
 
+        if let Some(ref vision) = req.long_term_vision {
+            sqlx::query("UPDATE journal_entries SET long_term_vision = $1 WHERE user_id = $2")
+                .bind(vision)
+                .bind(user_id)
+                .execute(&self.pool)
+                .await?;
+        }
+
         Ok(entry)
     }
 
@@ -137,5 +145,20 @@ impl JournalRepository {
             .execute(&self.pool)
             .await?;
         Ok(())
+    }
+
+    /// Fetch the user's latest long-term vision.
+    pub async fn get_latest_vision(&self, user_id: Uuid) -> Result<Option<String>> {
+        let row: Option<(Option<String>,)> = sqlx::query_as(
+            r#"SELECT long_term_vision
+               FROM journal_entries
+               WHERE user_id = $1 AND long_term_vision IS NOT NULL AND long_term_vision != ''
+               ORDER BY updated_at DESC
+               LIMIT 1"#,
+        )
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.and_then(|r| r.0))
     }
 }

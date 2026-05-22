@@ -52,13 +52,43 @@ impl JournalService {
         self.repo.upsert_entry(user_id, date, mood_score, &req).await
     }
 
-    /// Get the entry for a specific date (returns None if no entry exists).
+    /// Get the entry for a specific date (populates latest vision and returns mock if empty).
     pub async fn get_entry(
         &self,
         user_id: Uuid,
         date: NaiveDate,
     ) -> Result<Option<JournalEntry>> {
-        self.repo.get_entry_by_date(user_id, date).await
+        let entry = self.repo.get_entry_by_date(user_id, date).await?;
+        let latest_vision = self.repo.get_latest_vision(user_id).await?;
+
+        match entry {
+            Some(mut e) => {
+                e.long_term_vision = latest_vision;
+                Ok(Some(e))
+            }
+            None => {
+                if let Some(vision) = latest_vision {
+                    Ok(Some(JournalEntry {
+                        id: Uuid::nil(),
+                        user_id,
+                        entry_date: date,
+                        mood: None,
+                        mood_score: 5.0,
+                        grateful_text: None,
+                        content: None,
+                        long_term_vision: Some(vision),
+                        tiny_win: None,
+                        reflection_answers: serde_json::json!([false, false, false, false, false, false]),
+                        tags: serde_json::json!([]),
+                        photo_urls: serde_json::json!([]),
+                        created_at: chrono::Utc::now(),
+                        updated_at: chrono::Utc::now(),
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
     }
 
     /// Get entries in a date range.

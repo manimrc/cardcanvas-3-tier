@@ -1,6 +1,6 @@
 import type { Card } from '@/types';
 
-const GAP = 20;
+const GAP = 10;
 
 interface Rect {
   x: number;

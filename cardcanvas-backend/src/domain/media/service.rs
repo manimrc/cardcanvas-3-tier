@@ -54,4 +54,42 @@ impl MediaService {
             mime_type,
         })
     }
+
+    pub async fn read_file(&self, user_id: Uuid, filename: &str) -> Result<(Vec<u8>, String)> {
+        // Path traversal protection: filename must not contain directory traversal characters
+        if filename.contains("..") || filename.contains('/') || filename.contains('\\') {
+            return Err(AppError::BadRequest("Invalid filename".into()));
+        }
+
+        let upload_base = PathBuf::from(&self.media_dir);
+        let file_path = upload_base.join(user_id.to_string()).join(filename);
+
+        if !file_path.exists() {
+            return Err(AppError::NotFound);
+        }
+
+        let data = tokio::fs::read(&file_path)
+            .await
+            .map_err(|e| AppError::Internal(anyhow::anyhow!(e)))?;
+
+        // Determine content type from filename extension
+        let ext = std::path::Path::new(filename)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or_default()
+            .to_lowercase();
+
+        let mime_type = match ext.as_str() {
+            "png" => "image/png",
+            "jpg" | "jpeg" => "image/jpeg",
+            "gif" => "image/gif",
+            "webp" => "image/webp",
+            "svg" => "image/svg+xml",
+            "pdf" => "application/pdf",
+            _ => "application/octet-stream",
+        }.to_string();
+
+        Ok((data, mime_type))
+    }
 }
+

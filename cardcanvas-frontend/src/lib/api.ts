@@ -5,7 +5,7 @@
  */
 
 const BASE_URL = typeof window !== 'undefined'
-  ? ((window.location.protocol === 'tauri:' || (window as any).__TAURI_INTERNALS__ !== undefined)
+  ? ((window.location.protocol === 'tauri:' || (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== undefined)
       ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080')
       : '')
   : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080');

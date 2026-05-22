@@ -8,6 +8,59 @@ import ReflectionQuestions from './ReflectionQuestions';
 import JournalTodoList, { type TodoItem } from './JournalTodoList';
 import type { JournalEntry, Mood } from '@/types';
 
+const COZY_ILLUSTRATIONS = [
+  'undraw_astronomy_ied1.svg',
+  'undraw_biking_m4mb.svg',
+  'undraw_blooming_g9e9.svg',
+  'undraw_book-lover_m9n3.svg',
+  'undraw_book-reading_i0eb.svg',
+  'undraw_camping_q4ji.svg',
+  'undraw_compose-music_9403.svg',
+  'undraw_counting-stars_1fur.svg',
+  'undraw_eco-conscious_oqny.svg',
+  'undraw_friends_xscy.svg',
+  'undraw_gardening_jck1.svg',
+  'undraw_hang-out_rxuc.svg',
+  'undraw_hiking_9zta.svg',
+  'undraw_into-the-night_nd84.svg',
+  'undraw_landscape-photographer_e84n.svg',
+  'undraw_living_9un5.svg',
+  'undraw_making-art_c05m.svg',
+  'undraw_meditation_k4oa.svg',
+  'undraw_nature_yf30.svg',
+  'undraw_petting_xclp.svg',
+  'undraw_quality-time_h2b9.svg',
+  'undraw_refreshing-beverage_w8al.svg',
+  'undraw_relaxed-reading_wfkr.svg',
+  'undraw_relaxing-outdoors_s653.svg',
+  'undraw_ride-a-bicycle_oozn.svg',
+  'undraw_trip_rh66.svg',
+  'undraw_vacation-selfie_q5bs.svg',
+  'undraw_walking_2vhy.svg',
+  'undraw_yoga_i399.svg'
+];
+
+const PASTEL_COLORS = [
+  "#FDF6EC", // Warm Cream
+  "#FFF5F0", // Peach Blush
+  "#FFFDF0", // Creamy Yellow
+  "#FAF6F0", // Warm White
+  "#EDF4F9", // Misty Blue
+  "#ECE9F7", // Soft Lavender
+  "#E6EEF4", // Soft Blue-Gray
+  "#FFF6EE", // Warm Almond
+  "#EDF3F0", // Soft Sage Tint
+  "#FFF6F8", // Blush Pink
+  "#F6F3FC", // Soft Violet
+  "#F1F7F2", // Soft Green Tint
+  "#E8F5E9", // Light Mint
+  "#FAF4FF", // Soft Lilac
+  "#E0F2F1", // Pale Teal
+  "#FFF3F3", // Soft Rose Tint
+  "#FCF6FC"  // Soft Lavender-Pink
+];
+
+
 // Curated list of famous motivational quotes
 const MOTIVATIONAL_QUOTES = [
   { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
@@ -65,20 +118,73 @@ export default function JournalPage({ date, entry, onSave }: Props) {
   const [tinyWin, setTinyWin] = useState(entry?.tiny_win ?? '');
   const [reflections, setReflections] = useState<boolean[]>(entry?.reflection_answers ?? [false, false, false, false, false, false]);
   const [photos, setPhotos] = useState<string[]>(entry?.photo_urls ?? []);
-  const [uploading, setUploading] = useState<number | null>(null);
   const [todos, setTodos] = useState<TodoItem[]>(() => {
     if (!entry?.content) return [];
     try {
       const parsed = JSON.parse(entry.content);
       if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
+    } catch {
       // Fallback if legacy content is non-JSON
     }
     return [];
   });
 
-  const fileInput0 = useRef<HTMLInputElement>(null);
-  const fileInput1 = useRef<HTMLInputElement>(null);
+  // Comfort Photo (Left Slot) persistent state
+  const [comfortPhoto, setComfortPhoto] = useState<string>('');
+  const [uploadingComfort, setUploadingComfort] = useState<boolean>(false);
+  const comfortFileInput = useRef<HTMLInputElement>(null);
+
+  // Load persistent states on client mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedPhoto = localStorage.getItem('cardcanvas_comfort_photo');
+      if (savedPhoto) setComfortPhoto(savedPhoto);
+    }
+  }, []);
+
+  // 4-hour intervals (6 times a day) to automatically rotate illustrations
+  const [currentInterval, setCurrentInterval] = useState(0);
+
+  useEffect(() => {
+    // Set initial interval on mount
+    setCurrentInterval(Math.floor(new Date().getHours() / 4));
+
+    const timer = setInterval(() => {
+      const interval = Math.floor(new Date().getHours() / 4);
+      setCurrentInterval(prev => {
+        if (interval !== prev) {
+          return interval;
+        }
+        return prev;
+      });
+    }, 60000); // Check once a minute
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleComfortPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setUploadingComfort(true);
+    try {
+      const result = await api.media.upload(file);
+      setComfortPhoto(result.url);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cardcanvas_comfort_photo', result.url);
+      }
+    } catch (err) {
+      console.error('Comfort photo upload failed:', err);
+    } finally {
+      setUploadingComfort(false);
+    }
+  };
+
+  const removeComfortPhoto = () => {
+    setComfortPhoto('');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cardcanvas_comfort_photo');
+    }
+  };
 
   // Sync state if entry prop changes (e.g. user loaded a different day)
   useEffect(() => {
@@ -96,7 +202,7 @@ export default function JournalPage({ date, entry, onSave }: Props) {
         if (Array.isArray(parsed)) {
           parsedTodos = parsed;
         }
-      } catch (e) {
+      } catch {
         // Fallback
       }
     }
@@ -107,11 +213,15 @@ export default function JournalPage({ date, entry, onSave }: Props) {
   const stateRef = useRef({ mood, gratefulText, todos, longTermVision, tinyWin, reflections, photos });
   stateRef.current = { mood, gratefulText, todos, longTermVision, tinyWin, reflections, photos };
 
+  const hasUnsavedChanges = useRef(false);
+
   // Debounced save
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerSave = useCallback(() => {
+    hasUnsavedChanges.current = true;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
+      hasUnsavedChanges.current = false;
       const current = stateRef.current;
       onSave({
         mood: current.mood,
@@ -123,6 +233,25 @@ export default function JournalPage({ date, entry, onSave }: Props) {
         photo_urls: current.photos,
       });
     }, 1500);
+  }, [onSave]);
+
+  // Flush any pending save immediately on unmount
+  useEffect(() => {
+    return () => {
+      if (hasUnsavedChanges.current) {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        const current = stateRef.current;
+        onSave({
+          mood: current.mood,
+          grateful_text: current.gratefulText,
+          content: JSON.stringify(current.todos),
+          long_term_vision: current.longTermVision,
+          tiny_win: current.tinyWin,
+          reflection_answers: current.reflections,
+          photo_urls: current.photos,
+        });
+      }
+    };
   }, [onSave]);
 
   // Specific state update helpers
@@ -152,39 +281,19 @@ export default function JournalPage({ date, entry, onSave }: Props) {
     triggerSave();
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, slot: number) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    setUploading(slot);
-    try {
-      const result = await api.media.upload(file);
-      const updated = [...photos];
-      updated[slot] = result.url;
-      setPhotos(updated);
-      setTimeout(() => {
-        onSave({ photo_urls: updated });
-      }, 100);
-    } catch (err) {
-      console.error('Photo upload failed:', err);
-    } finally {
-      setUploading(null);
-    }
-  };
 
-  const removePhoto = (slot: number) => {
-    const updated = [...photos];
-    updated[slot] = '';
-    const filtered = updated.filter(Boolean);
-    setPhotos(filtered.length > 0 ? updated : []);
-    setTimeout(() => {
-      onSave({ photo_urls: filtered.length > 0 ? updated : [] });
-    }, 100);
-  };
 
   const dayName = format(date, 'EEEE');
   const dateDisplay = format(date, 'MMMM d, yyyy').replace(', ', ',');
   const quote = getQuoteForDate(date);
+
+  const getIllustrationHashForDate = (d: Date, interval: number) => {
+    return Math.abs(d.getDate() + d.getMonth() * 31 + d.getFullYear() + interval * 73);
+  };
+
+  const illustrationHash = getIllustrationHashForDate(date, currentInterval);
+  const illustrationName = COZY_ILLUSTRATIONS[illustrationHash % COZY_ILLUSTRATIONS.length];
+  const illustrationBgColor = PASTEL_COLORS[illustrationHash % PASTEL_COLORS.length];
 
   return (
     <div className="journal-page" id="journal-page">
@@ -218,53 +327,71 @@ export default function JournalPage({ date, entry, onSave }: Props) {
               />
             </div>
 
-            {/* Photo uploads (1/3 width, horizontal flex) */}
+            {/* Comfort Photo + Cozy Illustration Slots */}
             <div className="journal-photos" id="journal-photos">
-              {[0, 1].map(slot => {
-                const url = photos[slot];
-                return (
-                  <div key={slot} className="journal-photo-slot">
-                    {url ? (
-                      <div className="journal-photo-filled">
-                        <img src={url} alt={`Photo ${slot + 1}`} className="journal-photo-img" />
-                        <button
-                          type="button"
-                          className="journal-photo-remove"
-                          onClick={() => removePhoto(slot)}
-                          title="Remove photo"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="journal-photo-empty"
-                        onClick={() => (slot === 0 ? fileInput0 : fileInput1).current?.click()}
-                        disabled={uploading === slot}
-                      >
-                        {uploading === slot ? (
-                          <span className="journal-photo-uploading">uploading…</span>
-                        ) : (
-                          <>
-                            <Camera size={18} />
-                            <span className="journal-photo-label-lowercase">photo</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                    <input
-                      ref={slot === 0 ? fileInput0 : fileInput1}
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      onChange={e => handlePhotoUpload(e, slot)}
-                    />
+              {/* Left Slot: Comfort Photo (Persistent across all journal pages) */}
+              <div className="journal-photo-slot">
+                {comfortPhoto ? (
+                  <div className="journal-photo-filled">
+                    <img src={comfortPhoto} alt="Comfort Memory" className="journal-photo-img" />
+                    <button
+                      type="button"
+                      className="journal-photo-remove"
+                      onClick={removeComfortPhoto}
+                      title="Remove comfort photo"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
-                );
-              })}
+                ) : (
+                  <button
+                    type="button"
+                    className="journal-photo-empty"
+                    onClick={() => comfortFileInput.current?.click()}
+                    disabled={uploadingComfort}
+                  >
+                    {uploadingComfort ? (
+                      <span className="journal-photo-uploading">uploading…</span>
+                    ) : (
+                      <>
+                        <Camera size={18} />
+                        <span className="comfort-photo-placeholder-text">
+                          your comfort memory... 💖<br/>(pet, family, peaceful place)
+                        </span>
+                      </>
+                    )}
+                  </button>
+                )}
+                <input
+                  ref={comfortFileInput}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleComfortPhotoUpload}
+                />
+              </div>
+
+              {/* Right Slot: Cozy Illustration (Deterministic by Selected Date) */}
+              <div className="journal-photo-slot">
+                <div className="cozy-illustration-container" style={{ backgroundColor: illustrationBgColor }}>
+                  <img
+                    src={`/illustrations/${illustrationName}`}
+                    alt="Cozy life moment"
+                    className="cozy-illustration-img"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      padding: '16px',
+                      userSelect: 'none',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
+
 
           {/* Middle Layout: Todo checklist (left) + Column container (right) */}
           <div className="journal-middle-layout">
@@ -280,7 +407,7 @@ export default function JournalPage({ date, entry, onSave }: Props) {
               
               {/* My Long-Term Vision (Pink Card) */}
               <div className="journal-card journal-card-pink journal-flex-card">
-                <div className="journal-card-title">My Long-Term Vision 🌟</div>
+                <div className="journal-card-title">My future goals : 🌟</div>
                 <textarea
                   className="journal-textarea journal-flex-textarea"
                   placeholder="Where do you see yourself…"
@@ -306,7 +433,7 @@ export default function JournalPage({ date, entry, onSave }: Props) {
           <div className="journal-card journal-card-pinkbar">
             <input
               className="journal-tinywin-input"
-              placeholder="my tiny win of the day section ✨ …"
+              placeholder="my tiny win of the day ✨ …"
               value={tinyWin}
               onChange={e => updateWin(e.target.value)}
               id="journal-tiny-win"

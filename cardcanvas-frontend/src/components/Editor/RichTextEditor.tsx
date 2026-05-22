@@ -155,6 +155,20 @@ const ResizableImage = TiptapImage.extend({
   },
 });
 
+function cleanContent(content: string): string {
+  if (!content) return '';
+  const trimmed = content.trim();
+  if (
+    trimmed === 'Start typing...' ||
+    trimmed === '<p>Start typing...</p>' ||
+    trimmed === '<p>Start typing...</p><p></p>' ||
+    trimmed === '<p>Start typing...</p><p><br></p>'
+  ) {
+    return '';
+  }
+  return content;
+}
+
 export default function RichTextEditor({ card, mode = 'preview', onSave, onClose }: Props) {
   const { user } = useAuth();
   const [title, setTitle] = useState(card.title);
@@ -178,7 +192,10 @@ export default function RichTextEditor({ card, mode = 'preview', onSave, onClose
       ResizableImage,
       Highlight.configure({ multicolor: true }),
       Link.configure({ openOnClick: false }),
-      Placeholder.configure({ placeholder: 'Start typing...' }),
+      Placeholder.configure({
+        placeholder: 'Start typing...',
+        emptyNodeClass: 'is-editor-empty',
+      }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Table.configure({ resizable: true, allowTableNodeSelection: true }),
       TableRow,
@@ -187,7 +204,7 @@ export default function RichTextEditor({ card, mode = 'preview', onSave, onClose
       TaskList,
       TaskItem.configure({ nested: true }),
     ],
-    content: card.content || '',
+    content: cleanContent(card.content || ''),
     immediatelyRender: false,
     onUpdate: () => {
       setContentUpdated(Date.now());

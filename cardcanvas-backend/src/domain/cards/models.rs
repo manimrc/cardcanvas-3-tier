@@ -5,6 +5,13 @@ use uuid::Uuid;
 
 use validator::Validate;
 
+fn validate_url_opt(url: &str) -> std::result::Result<(), validator::ValidationError> {
+    if url.is_empty() || url.starts_with('/') || url.starts_with("http://") || url.starts_with("https://") {
+        return Ok(());
+    }
+    Err(validator::ValidationError::new("invalid_url"))
+}
+
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
 pub struct Card {
     pub id: Uuid,
@@ -41,7 +48,7 @@ pub struct CreateCardRequest {
     #[validate(length(min = 1))]
     pub card_type: String,
     pub title: Option<String>,
-    #[validate(url)]
+    #[validate(custom(function = "validate_url_opt"))]
     pub url: Option<String>,
     pub content: Option<String>,
     pub x: f64,
@@ -56,7 +63,7 @@ pub struct CreateCardRequest {
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateCardRequest {
     pub title: Option<String>,
-    #[validate(url)]
+    #[validate(custom(function = "validate_url_opt"))]
     pub url: Option<String>,
     pub content: Option<String>,
     pub x: Option<f64>,

@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import {
   startOfYear,
   endOfYear,
@@ -34,6 +34,8 @@ function scoreToColor(score: number): string {
 }
 
 export default function JournalHeatmap({ year, data, visible }: Props) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const { grid, weekCount } = useMemo(() => {
     const yearStart = startOfYear(new Date(year, 0, 1));
     const yearEnd = endOfYear(yearStart);
@@ -63,6 +65,39 @@ export default function JournalHeatmap({ year, data, visible }: Props) {
     return { grid: cells, weekCount: totalWeeks };
   }, [year, data]);
 
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !visible) return;
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    let targetWeekCol = 0;
+    if (year === currentYear) {
+      const yearStart = startOfYear(new Date(year, 0, 1));
+      const gridStart = startOfWeek(yearStart, { weekStartsOn: 0 });
+      const diffWeeks = differenceInWeeks(today, gridStart);
+      targetWeekCol = Math.max(0, diffWeeks);
+    } else if (year < currentYear) {
+      targetWeekCol = weekCount;
+    } else {
+      targetWeekCol = 0;
+    }
+
+    const cellSize = 11;
+    const gap = 2;
+    const dayLabelWidth = 18;
+    const targetX = dayLabelWidth + targetWeekCol * (cellSize + gap) - container.clientWidth / 2;
+
+    const handleScroll = () => {
+      container.scrollLeft = Math.max(0, targetX);
+    };
+
+    handleScroll();
+    const timer = setTimeout(handleScroll, 100);
+    return () => clearTimeout(timer);
+  }, [year, visible, weekCount]);
+
   if (!visible) return null;
 
   const cellSize = 11;
@@ -76,7 +111,7 @@ export default function JournalHeatmap({ year, data, visible }: Props) {
   return (
     <div className="journal-heatmap" id="journal-heatmap">
       <div className="journal-heatmap-title">Emotional Heatmap — {year}</div>
-      <div className="journal-heatmap-scroll">
+      <div className="journal-heatmap-scroll" ref={scrollContainerRef}>
         <svg width={svgWidth} height={svgHeight} className="journal-heatmap-svg">
           {/* Day labels */}
           {dayLabels.map((label, i) =>

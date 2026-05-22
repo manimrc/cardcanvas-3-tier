@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
 import { api } from '@/lib/api';
 import { useAuth } from '@/components/AuthContext';
 import JournalPage from './JournalPage';
-import type { JournalEntry, EmotionalHeatmapEntry } from '@/types';
+import type { JournalEntry } from '@/types';
 
 interface Props {
   /** Selected date from the calendar (managed by parent/sidebar) */
@@ -48,7 +48,9 @@ export default function JournalView({ selectedDate, isLightMode }: Props) {
       if (!user) return;
       try {
         const saved = await api.journal.saveEntry(dateStr, data);
-        setEntry(saved);
+        if (saved.entry_date === dateStr) {
+          setEntry(saved);
+        }
       } catch (err) {
         console.error('Failed to save journal entry:', err);
       }

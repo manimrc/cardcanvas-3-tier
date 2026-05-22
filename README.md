@@ -27,8 +27,16 @@ The project is organized as a **Domain-Driven Modular Monolith**, ensuring long-
 
 ## Backend Architecture: The Modular Monolith
 
-Our Rust backend has been refactored from a layered architecture into a **Domain-Driven Modular Monolith**. Each business capability is isolated within the `src/domain` directory, following a strict 3-tier pattern:
+Our Rust backend is structured as a **Domain-Driven Modular Monolith**. Each business capability is isolated within the `src/domain` directory, following a strict 3-tier pattern:
 
+*   **Auth**: User credentials, JWT generation, password reset, and session management.
+*   **Workspaces**: Organization structure using nested folders and boards.
+*   **Cards**: Rich text, media, and link cards positioned on the infinite workspace.
+*   **Whiteboards**: Board-linked drawing canvas powered by Excalidraw.
+*   **Media**: File uploads, image handling, and disk storage.
+*   **Journal**: Cozy personal daily logs, reflection questions, mood tracking, photo uploads, and heatmaps.
+
+Each domain is organized in a strict 3-tier pattern:
 *   **Repository Layer**: Encapsulates all SQLx queries and data access logic.
 *   **Service Layer**: Contains pure business logic and coordinates domain operations.
 *   **Routes Layer**: Handles Axum request extraction and JSON response formatting.
@@ -37,6 +45,18 @@ This structure allows us to:
 - Unit test business logic in isolation by mocking repositories.
 - Re-use domain logic across different entry points (CLI, Background Jobs, WebSockets).
 - Easily split any domain into a microservice in the future if needed.
+
+## Key Features
+
+- 🌀 **Infinite Canvas**: Interactive board workspace with support for text cards, image attachments, locking, and smooth drag-and-drop.
+- 🎨 **Whiteboard**: Built-in Excalidraw integration mapped to individual boards with auto-save timers and robust client-side validation.
+- 📔 **Daily Journal / Diary**: A warm, cute personal diary space with:
+  - Calendar navigation & custom daily motivational quotes.
+  - Interactive checklists (To-do list).
+  - Mood selector and lightweight daily reflection questions (e.g. *Talked kindly?*, *Stayed humble?*).
+  - Support for uploading up to 2 diary entry photos.
+  - Soft pastel color theme and subtle micro-animations.
+  - A GitHub-style interactive **Emotional Heatmap** visualizing mood trends over the year.
 
 ## Getting Started Locally
 

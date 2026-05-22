@@ -14,7 +14,7 @@ impl CardRepository {
 
     pub async fn get_cards_by_board(&self, user_id: Uuid, board_id: Uuid) -> Result<Vec<Card>> {
         let cards = sqlx::query_as(
-            r#"SELECT id, user_id, board_id, type as card_type, title, url, content,
+            r#"SELECT id, user_id, board_id, type, title, url, content,
                       x, y, width, height, color, tags, is_locked, created_at, updated_at
                FROM cards WHERE board_id = $1 AND user_id = $2 ORDER BY created_at ASC"#
         )
@@ -27,7 +27,7 @@ impl CardRepository {
 
     pub async fn get_all_cards(&self, user_id: Uuid) -> Result<Vec<Card>> {
         let cards = sqlx::query_as(
-            r#"SELECT id, user_id, board_id, type as card_type, title, url, content,
+            r#"SELECT id, user_id, board_id, type, title, url, content,
                       x, y, width, height, color, tags, is_locked, created_at, updated_at
                FROM cards WHERE user_id = $1 ORDER BY created_at ASC"#
         )
@@ -39,7 +39,7 @@ impl CardRepository {
 
     pub async fn get_card(&self, user_id: Uuid, id: Uuid) -> Result<Option<Card>> {
         let card = sqlx::query_as(
-            r#"SELECT id, user_id, board_id, type as card_type, title, url, content,
+            r#"SELECT id, user_id, board_id, type, title, url, content,
                       x, y, width, height, color, tags, is_locked, created_at, updated_at
                FROM cards WHERE id = $1 AND user_id = $2"#
         )
@@ -57,7 +57,7 @@ impl CardRepository {
         let card = sqlx::query_as(
             r#"INSERT INTO cards (id, user_id, board_id, type, title, url, content, x, y, width, height, color, tags, is_locked)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-               RETURNING id, user_id, board_id, type as card_type, title, url, content,
+               RETURNING id, user_id, board_id, type, title, url, content,
                          x, y, width, height, color, tags, is_locked, created_at, updated_at"#
         )
         .bind(card_id)
@@ -88,7 +88,7 @@ impl CardRepository {
                 color = $8, tags = $9, is_locked = $10,
                 updated_at = NOW()
                WHERE id = $11 AND user_id = $12
-               RETURNING id, user_id, board_id, type as card_type, title, url, content,
+               RETURNING id, user_id, board_id, type, title, url, content,
                          x, y, width, height, color, tags, is_locked, created_at, updated_at"#
         )
         .bind(req.title.as_ref().or(existing.title.as_ref()))

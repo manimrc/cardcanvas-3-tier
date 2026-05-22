@@ -1,6 +1,8 @@
 use axum::{
-    extract::{Multipart, State},
-    routing::post,
+    extract::{Multipart, State, Path},
+    routing::{post, get},
+    response::IntoResponse,
+    http::header,
     Json, Router,
 };
 use uuid::Uuid;
@@ -15,7 +17,9 @@ use super::models::UploadResponse;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/upload", post(upload_media))
+        .route("/files/:user_id/:filename", get(serve_media))
 }
+
 
 async fn upload_media(
     AuthUser(claims): AuthUser,
@@ -44,3 +48,22 @@ async fn upload_media(
 
     Err(AppError::BadRequest("No file in request".into()))
 }
+
+async fn serve_media(
+    State(state): State<AppState>,
+    Path((user_id_str, filename)): Path<(String, String)>,
+) -> Result<impl IntoResponse> {
+    let user_id = Uuid::parse_str(&user_id_str)
+        .map_err(|_| AppError::BadRequest("Invalid user ID".into()))?;
+
+    let (data, mime_type) = state.media_service.read_file(user_id, &filename).await?;
+
+    Ok((
+        [
+            (header::CONTENT_TYPE, mime_type),
+            (header::CACHE_CONTROL, "public, max-age=31536000".to_string()),
+        ],
+        data,
+    ))
+}
+

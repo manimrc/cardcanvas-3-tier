@@ -116,6 +116,20 @@ function PdfThumbnail({ url, title }: { url?: string; title: string }) {
   );
 }
 
+function cleanContent(content: string): string {
+  if (!content) return '';
+  const trimmed = content.trim();
+  if (
+    trimmed === 'Start typing...' ||
+    trimmed === '<p>Start typing...</p>' ||
+    trimmed === '<p>Start typing...</p><p></p>' ||
+    trimmed === '<p>Start typing...</p><p><br></p>'
+  ) {
+    return '';
+  }
+  return content;
+}
+
 export default function CanvasCard({
   card,
   scale,
@@ -172,10 +186,13 @@ export default function CanvasCard({
       const dy = (lastClientY - startY) / scale;
       const scrollDx = (container?.scrollLeft || 0) - origScrollLeft;
       const scrollDy = (container?.scrollTop || 0) - origScrollTop;
-      return {
-        x: Math.round(origX + dx + scrollDx),
-        y: Math.round(origY + dy + scrollDy),
-      };
+      let x = Math.round(origX + dx + scrollDx);
+      const y = Math.round(origY + dy + scrollDy);
+      if (container) {
+        const maxX = Math.max(0, container.clientWidth - card.width);
+        x = Math.max(0, Math.min(x, maxX));
+      }
+      return { x, y };
     };
 
     const autoScrollTick = () => {
@@ -226,7 +243,7 @@ export default function CanvasCard({
 
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
-  }, [card.id, card.x, card.y, scale, onMove, onDrop, onSelect, readOnly, scrollContainerRef]);
+  }, [card.id, card.x, card.y, card.width, scale, onMove, onDrop, onSelect, readOnly, scrollContainerRef]);
 
   const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -274,8 +291,18 @@ export default function CanvasCard({
         );
       case 'article':
         return <div className="card-body" dangerouslySetInnerHTML={{ __html: card.content }} />;
-      default:
-        return <div className="card-body" dangerouslySetInnerHTML={{ __html: card.content }} />;
+      default: {
+        const cleaned = cleanContent(card.content || '');
+        const isEmpty = !cleaned || cleaned === '<p></p>' || cleaned === '<p><br></p>';
+        return (
+          <div
+            className={`card-body ${isEmpty ? 'card-body-empty' : ''}`}
+            dangerouslySetInnerHTML={{
+              __html: !isEmpty ? cleaned : '<p class="card-placeholder-text">Double-click to write...</p>'
+            }}
+          />
+        );
+      }
     }
   };
 
