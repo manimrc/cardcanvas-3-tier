@@ -189,7 +189,9 @@ export default function CanvasCard({
       let x = Math.round(origX + dx + scrollDx);
       const y = Math.round(origY + dy + scrollDy);
       if (container) {
-        const maxX = Math.max(0, container.clientWidth - card.width);
+        const canvasInner = container.querySelector('.canvas-inner');
+        const boundaryW = canvasInner ? canvasInner.clientWidth : container.clientWidth;
+        const maxX = Math.max(0, boundaryW - card.width);
         x = Math.max(0, Math.min(x, maxX));
       }
       return { x, y };

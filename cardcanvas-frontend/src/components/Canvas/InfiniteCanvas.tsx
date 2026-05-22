@@ -68,7 +68,7 @@ const InfiniteCanvas = forwardRef<InfiniteCanvasHandle, Props>(function Infinite
     },
   }));
 
-  const innerW = canvasInnerWidth ?? '100%';
+  const innerW = canvasInnerWidth ?? 'max(1300px, 100%)';
   const innerH = canvasInnerHeight ?? '300vh';
 
   useLayoutEffect(() => {
@@ -126,17 +126,22 @@ const InfiniteCanvas = forwardRef<InfiniteCanvasHandle, Props>(function Infinite
       const card = cards.find(c => c.id === id);
       if (!card) { onUpdateCard({ id, x, y }); return; }
 
+      const container = containerRef.current;
       let clampedX = x;
-      if (containerRef.current) {
-        const maxX = Math.max(0, containerRef.current.clientWidth - card.width);
+      if (container) {
+        const canvasInner = container.querySelector('.canvas-inner');
+        const boundaryW = canvasInner ? canvasInner.clientWidth : container.clientWidth;
+        const maxX = Math.max(0, boundaryW - card.width);
         clampedX = Math.max(0, Math.min(x, maxX));
       }
 
       const resolved = findNonOverlappingPosition(id, clampedX, y, card.width, card.height, cards);
 
       let finalX = resolved.x;
-      if (containerRef.current) {
-        const maxX = Math.max(0, containerRef.current.clientWidth - card.width);
+      if (container) {
+        const canvasInner = container.querySelector('.canvas-inner');
+        const boundaryW = canvasInner ? canvasInner.clientWidth : container.clientWidth;
+        const maxX = Math.max(0, boundaryW - card.width);
         finalX = Math.max(0, Math.min(resolved.x, maxX));
       }
 
