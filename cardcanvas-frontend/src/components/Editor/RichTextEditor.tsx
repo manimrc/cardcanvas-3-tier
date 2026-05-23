@@ -24,7 +24,7 @@ import TaskItem from '@tiptap/extension-task-item';
 const lowlight = createLowlight(common);
 import { Card } from '@/types';
 import { CARD_COLORS } from '@/lib/constants';
-import { invoke } from '@tauri-apps/api/core';
+import { api } from '@/lib/api';
 import { useAuth } from '@/components/AuthContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -358,15 +358,24 @@ export default function RichTextEditor({ card, mode = 'preview', onSave, onClose
   const uploadFile = useCallback(async (file: File): Promise<string | null> => {
     if (!file || !user) return null;
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const data = Array.from(new Uint8Array(arrayBuffer));
+      const isTauri = typeof window !== 'undefined' && 
+        (window.location.protocol === 'tauri:' || (window as any).__TAURI_INTERNALS__ !== undefined);
 
-      return await invoke<string>('upload_media', {
-        userId: user.id,
-        filename: file.name,
-        mimeType: file.type || 'application/octet-stream',
-        data
-      });
+      if (isTauri) {
+        // Dynamically import Tauri only when running inside Tauri to prevent compile-time/SSR resolution errors on the web
+        const { invoke } = await import('@tauri-apps/api/core');
+        const arrayBuffer = await file.arrayBuffer();
+        const data = Array.from(new Uint8Array(arrayBuffer));
+        return await invoke<string>('upload_media', {
+          userId: user.id,
+          filename: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          data
+        });
+      } else {
+        const res = await api.media.upload(file);
+        return res.url;
+      }
     } catch (err) {
       console.error('Upload failed', err);
       return null;

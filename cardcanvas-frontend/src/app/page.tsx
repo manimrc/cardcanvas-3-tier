@@ -24,6 +24,17 @@ function readStorage<T>(key: string, fallback: T): T {
   } catch { return fallback; }
 }
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export default function Home() {
   const { user, logout } = useAuth();
 
@@ -165,7 +176,7 @@ export default function Home() {
 
     try {
       const card = await api.cards.create({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         board_id: activeBoardId,
         type: type as CardType,
         x: resolved.x,

@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-shell": "^2.3.5",
     "@tiptap/extension-code-block-lowlight": "^3.22.5",
     "@tiptap/extension-color": "^3.22.5",
     "@tiptap/extension-highlight": "^3.22.5",
@@ -43,6 +45,7 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

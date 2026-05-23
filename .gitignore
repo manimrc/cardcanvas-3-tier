@@ -70,3 +70,6 @@ build/
 node_modules/
 *.log
 
+# Plans
+plans/
+

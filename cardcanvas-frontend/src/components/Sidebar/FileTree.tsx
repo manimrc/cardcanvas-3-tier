@@ -164,15 +164,32 @@ function BoardItem({ board, active, onSelect, onDelete, onRename, depth }: {
 
 export default function FileTree(props: Props) {
   const tree = buildTree(props.folders, props.boards);
+  const rootBoards = props.boards.filter(b => !b.folderId);
 
   return (
     <div>
       {tree.map(node => (
         <FolderNode key={node.folder.id} node={node} {...props} depth={0} />
       ))}
-      <button className="tree-add-btn" onClick={() => props.onCreateFolder(null)}>
-        <Plus size={12} /> New Folder
-      </button>
+      {rootBoards.map(b => (
+        <BoardItem
+          key={b.id}
+          board={b}
+          active={b.id === props.activeBoardId}
+          onSelect={() => props.onSelectBoard(b.id)}
+          onDelete={() => props.onDeleteBoard(b.id)}
+          onRename={(newName) => props.onRenameBoard(b.id, newName)}
+          depth={0}
+        />
+      ))}
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <button type="button" className="tree-add-btn" style={{ flex: 1, margin: 0 }} onClick={() => props.onCreateFolder(null)}>
+          <Plus size={12} /> New Folder
+        </button>
+        <button type="button" className="tree-add-btn" style={{ flex: 1, margin: 0 }} onClick={() => props.onCreateBoard('')}>
+          <Plus size={12} /> New Board
+        </button>
+      </div>
     </div>
   );
 }

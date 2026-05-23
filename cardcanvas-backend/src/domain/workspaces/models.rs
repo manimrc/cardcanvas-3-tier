@@ -6,6 +6,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -14,6 +15,7 @@ pub struct Folder {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Board {
     pub id: Uuid,
     pub user_id: Uuid,

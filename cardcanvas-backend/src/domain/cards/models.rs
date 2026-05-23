@@ -13,6 +13,7 @@ fn validate_url_opt(url: &str) -> std::result::Result<(), validator::ValidationE
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Card {
     pub id: Uuid,
     pub user_id: Uuid,
