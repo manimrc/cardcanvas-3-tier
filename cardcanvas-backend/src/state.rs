@@ -9,6 +9,7 @@ use crate::domain::journal::{repository::JournalRepository, service::JournalServ
 
 #[derive(Clone)]
 pub struct AppState {
+    pub db: PgPool,
     pub jwt_secret: String,
     pub auth_service: Arc<AuthService>,
     pub card_service: Arc<CardService>,
@@ -44,6 +45,7 @@ impl AppState {
         let journal_service = Arc::new(JournalService::new(journal_repo));
 
         Self {
+            db,
             jwt_secret,
             auth_service,
             card_service,

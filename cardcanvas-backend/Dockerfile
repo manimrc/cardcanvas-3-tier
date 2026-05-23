@@ -1,43 +1,34 @@
-# ─── Build Stage ───────────────────────────────────────────────────────────
-FROM rust:slim AS builder
-
-# Install build deps
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
-
+# Stage 1: Recipe Planner
+FROM rust:1.75-slim AS planner
 WORKDIR /app
-
-# Cache deps first (layer caching optimization)
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release
-RUN rm -rf src
-
-# Build actual source
+RUN cargo install cargo-chef --version 0.1.62
 COPY . .
-RUN touch src/main.rs && cargo build --release
+RUN cargo chef prepare --recipe-path recipe.json
 
-# ─── Runtime Stage ─────────────────────────────────────────────────────────
-FROM debian:bookworm-slim AS runtime
-
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl3 \
-    && rm -rf /var/lib/apt/lists/*
-
+# Stage 2: Cache compiler dependencies
+FROM rust:1.75-slim AS cacher
 WORKDIR /app
+RUN cargo install cargo-chef --version 0.1.62
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 
-# Copy binary and migrations
-COPY --from=builder /app/target/release/cardcanvas-backend .
-COPY --from=builder /app/migrations ./migrations
+# Stage 3: Builder
+FROM rust:1.75-slim AS builder
+WORKDIR /app
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+COPY . .
+COPY --from=cacher /app/target target
+COPY --from=cacher /usr/local/cargo /usr/local/cargo
+RUN cargo build --release --bin cardcanvas-backend
 
-# Create uploads dir
+# Stage 4: Minimal Runtime
+FROM debian:bookworm-slim AS runtime
+WORKDIR /app
+RUN apt-get update && apt-get install -y ca-certificates libssl3 && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/cardcanvas-backend /app/
+COPY --from=builder /app/migrations /app/migrations
 RUN mkdir -p /app/uploads
-
+ENV PORT=8080
 EXPOSE 8080
-
-ENV RUST_LOG=cardcanvas_backend=info,tower_http=info
-
 CMD ["./cardcanvas-backend"]
