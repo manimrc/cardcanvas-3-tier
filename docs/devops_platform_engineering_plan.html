@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleekly 3-Tier - DevOps & Platform Engineering Plan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: { useWidth: true, htmlLabels: true },
+            gantt: { useWidth: true }
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #334155;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        h1, h2, h3, h4 {
+            font-family: 'Outfit', sans-serif;
+            color: #0f172a;
+            font-weight: 600;
+        }
+        h1 {
+            font-size: 2.2em;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-top: 0;
+        }
+        h2 {
+            font-size: 1.6em;
+            margin-top: 35px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+        }
+        h3 {
+            font-size: 1.25em;
+            margin-top: 25px;
+        }
+        p, li {
+            font-size: 1.05em;
+            color: #475569;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        code {
+            font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+            background-color: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #0f172a;
+        }
+        pre {
+            background-color: #0f172a;
+            padding: 18px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #1e293b;
+        }
+        pre code {
+            background-color: transparent;
+            color: #f8fafc;
+            padding: 0;
+            font-size: 0.9em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .mermaid {
+            background: #ffffff !important;
+            padding: 20px !important;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin: 25px 0;
+            display: flex;
+            justify-content: center;
+        }
+        blockquote {
+            border-left: 4px solid #3b82f6;
+            background: #eff6ff;
+            margin: 20px 0;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        blockquote p {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 0.98em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DevOps and Platform Engineering Learning Lab Roadmap: Sleekly 3-Tier</h1>
+<p>This document evaluates the current architecture of the <strong>Sleekly 3-Tier</strong> application and provides a detailed roadmap to transform it into a production-grade DevOps and Platform Engineering learning environment. It details cloud architecture, secure networking, infrastructure-as-code, observability, SRE practices, CI/CD pipelines, security hardening, and Kubernetes migration.</p>
+<hr>
+<h2>🔍 Part 1: Current Architecture Evaluation &amp; Gaps</h2>
+<p>The current <code>cardcanvas-3-tier</code> (now <code>sleekly-3-tier</code>) codebase is a traditional three-tier web application consisting of a Next.js frontend, an Axum Rust backend, and a PostgreSQL database. While functional, the current deployment scripts, Terraform configs, and local docker setups contain several structural limitations:</p>
+<pre class="mermaid">graph TD
+    Client[Web Browser] -->|HTTP / Public| FrontendVM[Frontend VM / PM2 / Nginx]
+    FrontendVM -->|Cleartext HTTP| BackendVM[Backend VM / systemd]
+    BackendVM -->|Cleartext SQL| PostgresVM[PostgreSQL DB VM]
+    Admin[Admin/Operator] -->|Direct SSH / Port 22| FrontendVM
+    Admin -->|Direct SSH / Port 22| BackendVM</pre><h3>Critical Gaps for Production Deployments:</h3>
+<ul>
+<li><strong>Security Gaps</strong>:<ul>
+<li><strong>Direct Public SSH (Port 22)</strong>: VMs are exposed directly to the internet for deployment scripts.</li>
+<li><strong>Insecure Secrets Management</strong>: Credentials, database passwords, and JWT keys are stored in plain-text <code>.env</code> templates or configuration files.</li>
+<li><strong>Lack of TLS/SSL</strong>: Nginx configuration files contain placeholders but lack automated Certbot/SSL certificates, letting HTTP traffic pass in the clear.</li>
+<li><strong>Cleartext Backend Communication</strong>: Traffic between the Frontend VM, Backend VM, and PostgreSQL database passes unencrypted over standard ports.</li>
+</ul>
+</li>
+<li><strong>Availability &amp; Reliability Gaps</strong>:<ul>
+<li><strong>Single Points of Failure (SPOF)</strong>: Single VMs for the frontend, backend, and database. No auto-scaling, load balancing, or failover configuration.</li>
+<li><strong>No Offsite Backups</strong>: A simple bash script (<code>scripts/backup.sh</code>) backs up database files locally, leaving the application vulnerable to regional VM disk failures.</li>
+</ul>
+</li>
+<li><strong>Observability &amp; Monitoring Gaps</strong>:<ul>
+<li><strong>Standard Out Logging</strong>: Logs are written to simple file targets (<code>/var/log/sleekly-backend/out.log</code>) without log aggregation, indexing, metric generation, or alerting rules.</li>
+</ul>
+</li>
+<li><strong>Manual Deployments</strong>:<ul>
+<li>Deployments use local bash scripts that require direct SSH keys and VM IP addresses. This does not align with GitOps or modern automated CI/CD practices.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>🏛️ Part 2: Target Enterprise Cloud Architecture (Azure)</h2>
+<p>The target architecture transitions the application into a secure, high-availability virtual network spanning private subnets, managed databases, load balancers, and a secure Bastion connection.</p>
+<pre class="mermaid">flowchart TD
+    Internet[Public Internet] -->|HTTPS Port 443| AppGW[Azure Application Gateway + WAF]
+    
+    subgraph VNet["Azure Virtual Network (sleekly-prod-vnet)"]
+        subgraph PublicSubnet["Public Subnet (App Gateway)"]
+            AppGW
+        end
+        
+        subgraph BastionSubnet["AzureBastionSubnet"]
+            Bastion[Azure Bastion Service]
+        end
+        
+        subgraph PrivateWebSubnet["Private Web Subnet (Frontend)"]
+            VMSS_FE[Frontend VM Scale Set - Next.js]
+        end
+        
+        subgraph PrivateAPISubnet["Private API Subnet (Backend)"]
+            VMSS_BE[Backend VM Scale Set - Axum]
+        end
+        
+        subgraph PrivateDataSubnet["Private Data Subnet (Database)"]
+            PE_DB[Private Endpoint]
+            DB[(Azure Database for PostgreSQL Flexible Server)]
+        end
+    end
+
+    Bastion -->|Secure RDP/SSH| VMSS_FE
+    Bastion -->|Secure RDP/SSH| VMSS_BE
+    AppGW -->|Reverse Proxy| VMSS_FE
+    VMSS_FE -->|Internal Load Balancer / API Requests| VMSS_BE
+    VMSS_BE -->|Private Link / SSL Encrypted SQL| PE_DB
+    PE_DB --> DB</pre><h3>1. Networking Infrastructure (Hub-and-Spoke &amp; Private Links)</h3>
+<ul>
+<li><strong>Azure Virtual Network (VNet)</strong>: Segregated into four distinct subnets:<ol>
+<li><code>AppGatewaySubnet</code> (Public): Only exposes public HTTPS (Port 443) traffic.</li>
+<li><code>AzureBastionSubnet</code> (Private): Dedicated subnet for secure administrative access.</li>
+<li><code>FrontendSubnet</code> (Private): Hosts the Next.js VMs. No public IP addresses.</li>
+<li><code>BackendSubnet</code> (Private): Hosts the Rust Axum APIs. Accessible only from the frontend subnet.</li>
+<li><code>DatabaseSubnet</code> (Private): Contains Private Endpoints for the PostgreSQL instance.</li>
+</ol>
+</li>
+<li><strong>Network Security Groups (NSGs)</strong>: Rigid ingress/egress rules enforcing the principle of least privilege:<ul>
+<li><em>Frontend Subnet Ingress</em>: Accept traffic ONLY from the Application Gateway on port <code>3000</code>.</li>
+<li><em>Backend Subnet Ingress</em>: Accept traffic ONLY from the Frontend Subnet on port <code>8080</code>.</li>
+<li><em>Database Subnet Ingress</em>: Accept traffic ONLY from the Backend Subnet on port <code>5432</code>.</li>
+<li><em>Block All SSH (Port 22)</em>: Except through the Azure Bastion subnet IP range.</li>
+</ul>
+</li>
+</ul>
+<h3>2. High Availability (HA) &amp; Load Balancing</h3>
+<ul>
+<li><strong>Azure Application Gateway</strong>: Acts as a Layer 7 Load Balancer, providing:<ul>
+<li>SSL/TLS termination (using certificates stored in Azure Key Vault).</li>
+<li>Web Application Firewall (WAF v2) to protect against OWASP Top 10 exploits.</li>
+</ul>
+</li>
+<li><strong>Virtual Machine Scale Sets (VMSS)</strong>:<ul>
+<li>Deploy frontend and backend VMs across multiple availability zones.</li>
+<li>Autoscaling rules based on CPU and memory usage metrics.</li>
+</ul>
+</li>
+</ul>
+<h3>3. Managed Database Tier</h3>
+<ul>
+<li><strong>Azure Database for PostgreSQL (Flexible Server)</strong>:<ul>
+<li>Configured with High Availability (Zone-Redundant).</li>
+<li>Private Link Integration ensures all database traffic remains inside the Azure backbone network.</li>
+<li>Storage auto-growth and geo-redundant backups enabled.</li>
+</ul>
+</li>
+</ul>
+<h3>4. Configuration and Secrets Management</h3>
+<ul>
+<li><strong>Azure Key Vault</strong>: Stores all secrets, including the database passwords, JWT signing keys, and SSL certificates.</li>
+<li><strong>Managed Identities</strong>: Frontend and backend VMs run under system-assigned managed identities, letting them query Azure Key Vault directly for credentials at startup without hardcoded access tokens.</li>
+</ul>
+<hr>
+<h2>🚀 Part 3: Production DevOps Roadmap</h2>
+<p>We will divide this transformation into 5 clear phases to create a production-ready system.</p>
+<h3>Phase 1: Infrastructure-as-Code (Terraform &amp; Landing Zone)</h3>
+<ul>
+<li><strong>Refactor Terraform Structure</strong>:<ul>
+<li>Split the current single-file configuration into a modular design (<code>modules/networking</code>, <code>modules/compute</code>, <code>modules/database</code>, <code>modules/security</code>).</li>
+<li>Implement <strong>Remote State Management</strong> using an Azure Blob Storage container with lease locking enabled.</li>
+</ul>
+</li>
+<li><strong>Implement Azure Landing Zone</strong>:<ul>
+<li>Define Hub-and-Spoke network topology using peer-to-peer VNet links.</li>
+<li>Deploy <strong>Azure Bastion</strong> to allow SSH over HTTPS without exposing public ports.</li>
+<li>Deploy Azure Key Vault to store secrets, integrating it with the VM environments.</li>
+</ul>
+</li>
+</ul>
+<h3>Phase 2: Enterprise CI/CD Pipeline</h3>
+<ul>
+<li><strong>Implement GitHub Actions Workflows</strong>:<ul>
+<li>Create two pipelines: one for <code>sleekly-backend</code> and one for <code>sleekly-frontend</code>.</li>
+<li><strong>Build &amp; Push</strong>: Build Docker images locally and push them to <strong>Azure Container Registry (ACR)</strong>.</li>
+<li><strong>Vulnerability Scanning</strong>: Scan images during the build phase using <strong>Trivy</strong> or <strong>Aqua MicroScanner</strong>.</li>
+<li><strong>Deployment</strong>: Deploy to virtual machine clusters or scale sets using blue-green deployment strategies to ensure zero downtime.</li>
+</ul>
+</li>
+</ul>
+<pre class="mermaid">gantt
+    title DevOps & Platform Engineering Lab Roadmap
+    dateFormat  YYYY-MM-DD
+    section Phase 1: IaC & Land Zones
+    Terraform Refactoring          :active, p1-1, 2026-06-01, 14d
+    VNet Hub-and-Spoke Deployment   :p1-2, after p1-1, 10d
+    section Phase 2: CI/CD & Security
+    ACR + GHA Workflows           :p2-1, after p1-2, 12d
+    Key Vault & Identity Integration:p2-2, after p2-1, 8d
+    section Phase 3: Observability
+    OTel & Prometheus Setup        :p3-1, after p2-2, 14d
+    Grafana Dashboards & Alerting  :p3-2, after p3-1, 7d
+    section Phase 4: SRE & DR
+    Zone-Redundancy & Backups     :p4-1, after p3-2, 10d
+    Chaos Engineering Tests       :p4-2, after p4-1, 7d
+    section Phase 5: K8s Migration
+    AKS Cluster IaC               :p5-1, after p4-2, 14d
+    ArgoCD GitOps Pipeline        :p5-2, after p5-1, 12d</pre><h3>Phase 3: Observability, Logging, &amp; SRE Practices</h3>
+<ul>
+<li><strong>OpenTelemetry Integration</strong>:<ul>
+<li>Instrument the Axum backend using OpenTelemetry trace providers to track latency and runtime statistics.</li>
+<li>Instrument the Next.js frontend with client-side telemetry trackers.</li>
+</ul>
+</li>
+<li><strong>Observability Stack (Prometheus + Grafana + Loki)</strong>:<ul>
+<li>Deploy Prometheus collectors to query JVM/VM metrics.</li>
+<li>Deploy Promtail / Loki on VM instances to parse and forward structured JSON logs.</li>
+<li>Build Grafana dashboards monitoring SRE Golden Signals (Latency, Traffic, Errors, Saturation).</li>
+</ul>
+</li>
+<li><strong>Alerting</strong>:<ul>
+<li>Configure Discord or Slack notifications for HTTP 5xx spikes, high CPU usage, and database connection limits.</li>
+</ul>
+</li>
+</ul>
+<h3>Phase 4: SRE Operations, Disaster Recovery, &amp; Backups</h3>
+<ul>
+<li><strong>Backups</strong>:<ul>
+<li>Enable PostgreSQL geo-redundant backups with a 35-day retention window.</li>
+<li>Set up Azure Recovery Services vault to capture daily VM system snapshots.</li>
+</ul>
+</li>
+<li><strong>Disaster Recovery Plan</strong>:<ul>
+<li>Create a secondary cold-standby deployment in a secondary Azure region.</li>
+<li>Create automated Terraform scripts to stand up the secondary environment if a regional outage occurs.</li>
+</ul>
+</li>
+</ul>
+<h3>Phase 5: Cloud-Native Migration Path (Kubernetes &amp; GitOps)</h3>
+<ul>
+<li><strong>Azure Kubernetes Service (AKS)</strong>:<ul>
+<li>Migrate VM configurations into AKS.</li>
+<li>Develop <strong>Helm Charts</strong> for <code>sleekly-frontend</code> and <code>sleekly-backend</code>.</li>
+</ul>
+</li>
+<li><strong>GitOps Pipeline (ArgoCD)</strong>:<ul>
+<li>Deploy ArgoCD inside the AKS cluster.</li>
+<li>Define a GitOps repository containing Kubernetes manifests (Deployments, Services, ingress-nginx, Cert-manager, ExternalDNS).</li>
+<li>Enable automatic synchronization so that updates in git automatically deploy to the cluster.</li>
+</ul>
+</li>
+<li><strong>Autoscaling with KEDA</strong>:<ul>
+<li>Configure KEDA (Kubernetes Event-driven Autoscaling) to scale pod counts based on real-time HTTP traffic volumes.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>📋 Part 4: Production Checklist</h2>
+<p>Below is the production readiness checklist that defines success for this platform engineering lab:</p>
+<table>
+<thead>
+<tr>
+<th align="left">Category</th>
+<th align="left">Requirement</th>
+<th align="left">Verification Method</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>Networking</strong></td>
+<td align="left">All backend VMs are hosted in private subnets with no public IPs.</td>
+<td align="left">Verify via Azure Portal or CLI that only the Application Gateway has a public IP.</td>
+</tr>
+<tr>
+<td align="left"><strong>Security</strong></td>
+<td align="left">Secrets are fetched dynamically from Azure Key Vault using Managed Identities.</td>
+<td align="left">Verify no plain-text credentials exist in the git repository or VM environment configuration files.</td>
+</tr>
+<tr>
+<td align="left"><strong>Access Control</strong></td>
+<td align="left">SSH is disabled on public ports; access is restricted to Azure Bastion.</td>
+<td align="left">Run an Nmap scan against VM public IPs; confirm port 22 is blocked.</td>
+</tr>
+<tr>
+<td align="left"><strong>Observability</strong></td>
+<td align="left">Latency, traffic volume, errors, and saturation are tracked in Grafana.</td>
+<td align="left">Simulate a load test and confirm the metrics populate the dashboards.</td>
+</tr>
+<tr>
+<td align="left"><strong>CI/CD</strong></td>
+<td align="left">Commits to <code>main</code> compile, scan, and deploy automatically without manual SSH commands.</td>
+<td align="left">Trigger a GitHub Action and verify successful deployment.</td>
+</tr>
+<tr>
+<td align="left"><strong>High Availability</strong></td>
+<td align="left">The application remains online if a frontend or backend VM fails.</td>
+<td align="left">Terminate a VM instance and verify the load balancer redirects traffic to other instances.</td>
+</tr>
+<tr>
+<td align="left"><strong>Database</strong></td>
+<td align="left">Database traffic is private and zone-redundant.</td>
+<td align="left">Confirm the database uses Private Link and zone-redundant high availability.</td>
+</tr>
+<tr>
+<td align="left"><strong>GitOps</strong></td>
+<td align="left">AKS manifests are synchronized using ArgoCD.</td>
+<td align="left">Modify replica count in git and verify deployment update in Kubernetes.</td>
+</tr>
+</tbody></table>
+
+    </div>
+</body>
+</html>

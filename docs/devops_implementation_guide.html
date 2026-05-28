@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleekly 3-Tier - DevOps Guided Implementation Tutorial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: { useWidth: true, htmlLabels: true },
+            gantt: { useWidth: true }
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #334155;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        h1, h2, h3, h4 {
+            font-family: 'Outfit', sans-serif;
+            color: #0f172a;
+            font-weight: 600;
+        }
+        h1 {
+            font-size: 2.2em;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-top: 0;
+        }
+        h2 {
+            font-size: 1.6em;
+            margin-top: 35px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+        }
+        h3 {
+            font-size: 1.25em;
+            margin-top: 25px;
+        }
+        p, li {
+            font-size: 1.05em;
+            color: #475569;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        code {
+            font-family: Menlo, Monaco, Consolas, Courier New, monospace;
+            background-color: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #0f172a;
+        }
+        pre {
+            background-color: #0f172a;
+            padding: 18px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #1e293b;
+        }
+        pre code {
+            background-color: transparent;
+            color: #f8fafc;
+            padding: 0;
+            font-size: 0.9em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .mermaid {
+            background: #ffffff !important;
+            padding: 20px !important;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin: 25px 0;
+            display: flex;
+            justify-content: center;
+        }
+        blockquote {
+            border-left: 4px solid #3b82f6;
+            background: #eff6ff;
+            margin: 20px 0;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        blockquote p {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 0.98em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Detailed DevOps &amp; Platform Engineering Implementation Guide</h1>
+<p>This guide provides step-by-step instructions to implement a production-grade infrastructure, secure CI/CD pipelines, configuration management, and observability for the <strong>Sleekly 3-Tier</strong> application on Microsoft Azure.</p>
+<hr>
+<h2>📂 Project Directory Organization</h2>
+<p>To manage this deployment, structure your repository as follows:</p>
+<pre><code class="language-text">sleekly-3-tier/
+├── sleekly-backend/          # Rust Backend Source Code
+├── sleekly-frontend/         # Next.js Frontend Source Code
+├── docker-compose.yml        # Local Dev Environment
+├── .github/
+│   └── workflows/
+│       ├── backend-ci.yml    # GHA Pipeline for Backend
+│       └── frontend-ci.yml   # GHA Pipeline for Frontend
+├── terraform/                # Infrastructure as Code
+│   ├── main.tf               # Global Resources (RG, ACR, Key Vault)
+│   ├── providers.tf          # Azure Providers &amp; Remote State
+│   ├── variables.tf          # Configurable Variables
+│   └── modules/
+│       ├── networking/       # VNet, Subnets, NSGs, Peering, Bastion
+│       ├── compute/          # VM Scale Sets, App Gateway
+│       └── database/         # PostgreSQL Flexible Server &amp; Private Endpoints
+└── ansible/                  # Configuration Management
+    ├── inventory.ini         # VM Scale Set IPs
+    ├── playbook.yml          # Setup playbook (Nginx, PM2, Systemd, OTel)
+    └── roles/                # Modular config files
+</code></pre>
+<hr>
+<h2>🛠️ Step 1: Secure Networking &amp; Hub-and-Spoke Topology (Terraform)</h2>
+<p>You will deploy a secure <strong>Hub-and-Spoke</strong> network topology. The Hub contains the Bastion host and Application Gateway, while the Spoke contains the application compute instances and private database endpoints.</p>
+<h3>1. File: <code>terraform/providers.tf</code></h3>
+<p>Create a remote backend using an Azure Storage Account container to store and lock your state files:</p>
+<pre><code class="language-hcl">terraform {
+  required_version = &quot;&gt;= 1.5.0&quot;
+  required_providers {
+    azurerm = {
+      source  = &quot;hashicorp/azurerm&quot;
+      version = &quot;~&gt; 3.90.0&quot;
+    }
+  }
+  backend &quot;azurerm&quot; {
+    resource_group_name  = &quot;sleekly-tfstate-rg&quot;
+    storage_account_name = &quot;sleeklytfstatesa&quot;
+    container_name       = &quot;tfstate&quot;
+    key                  = &quot;prod.terraform.tfstate&quot;
+  }
+}
+
+provider &quot;azurerm&quot; {
+  features {}
+}
+</code></pre>
+<h3>2. File: <code>terraform/modules/networking/main.tf</code></h3>
+<p>Define the virtual networks, subnets, and peering:</p>
+<pre><code class="language-hcl"># Hub Virtual Network
+resource &quot;azurerm_virtual_network&quot; &quot;hub&quot; {
+  name                = &quot;sleekly-hub-vnet&quot;
+  address_space       = [&quot;10.0.0.0/16&quot;]
+  location            = var.location
+  resource_group_name = var.resource_group_name
+}
+
+# Spoke Virtual Network
+resource &quot;azurerm_virtual_network&quot; &quot;spoke&quot; {
+  name                = &quot;sleekly-spoke-vnet&quot;
+  address_space       = [&quot;10.1.0.0/16&quot;]
+  location            = var.location
+  resource_group_name = var.resource_group_name
+}
+
+# Subnets in Spoke
+resource &quot;azurerm_subnet&quot; &quot;frontend&quot; {
+  name                 = &quot;frontend-subnet&quot;
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.spoke.name
+  address_prefixes     = [&quot;10.1.1.0/24&quot;]
+}
+
+resource &quot;azurerm_subnet&quot; &quot;backend&quot; {
+  name                 = &quot;backend-subnet&quot;
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.spoke.name
+  address_prefixes     = [&quot;10.1.2.0/24&quot;]
+}
+
+resource &quot;azurerm_subnet&quot; &quot;database&quot; {
+  name                 = &quot;database-subnet&quot;
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.spoke.name
+  address_prefixes     = [&quot;10.1.3.0/24&quot;]
+  
+  delegation {
+    name = &quot;fs-delegation&quot;
+    service_delegation {
+      name    = &quot;Microsoft.DBforPostgreSQL/flexibleServers&quot;
+      actions = [&quot;Microsoft.Network/virtualNetworks/subnets/join/action&quot;]
+    }
+  }
+}
+
+# VNet Peering: Hub to Spoke
+resource &quot;azurerm_virtual_network_peering&quot; &quot;hub_to_spoke&quot; {
+  name                      = &quot;hub-to-spoke&quot;
+  resource_group_name       = var.resource_group_name
+  virtual_network_name      = azurerm_virtual_network.hub.name
+  remote_virtual_network_id = azurerm_virtual_network.spoke.id
+  allow_virtual_network_access = true
+}
+
+resource &quot;azurerm_virtual_network_peering&quot; &quot;spoke_to_hub&quot; {
+  name                      = &quot;spoke-to-hub&quot;
+  resource_group_name       = var.resource_group_name
+  virtual_network_name      = azurerm_virtual_network.spoke.name
+  remote_virtual_network_id = azurerm_virtual_network.hub.id
+  allow_virtual_network_access = true
+}
+</code></pre>
+<h3>3. File: <code>terraform/modules/networking/bastion.tf</code></h3>
+<p>Add a dedicated subnet and Azure Bastion service inside the Hub:</p>
+<pre><code class="language-hcl">resource &quot;azurerm_subnet&quot; &quot;bastion&quot; {
+  name                 = &quot;AzureBastionSubnet&quot;
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.hub.name
+  address_prefixes     = [&quot;10.0.1.0/24&quot;]
+}
+
+resource &quot;azurerm_public_ip&quot; &quot;bastion&quot; {
+  name                = &quot;bastion-ip&quot;
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  allocation_method   = &quot;Static&quot;
+  sku                 = &quot;Standard&quot;
+}
+
+resource &quot;azurerm_bastion_host&quot; &quot;main&quot; {
+  name                = &quot;sleekly-bastion&quot;
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  ip_configuration {
+    name                 = &quot;configuration&quot;
+    subnet_id            = azurerm_subnet.bastion.id
+    public_ip_address_id = azurerm_public_ip.bastion.id
+  }
+}
+</code></pre>
+<hr>
+<h2>🔒 Step 2: Secrets Management &amp; Managed Identities</h2>
+<p>Rather than using passwords in environment files, you will configure VMs to authenticate securely to Key Vault using Azure AD Managed Identities.</p>
+<h3>1. File: <code>terraform/main.tf</code></h3>
+<p>Provision an Azure Key Vault and define access permissions:</p>
+<pre><code class="language-hcl"># Create Resource Group
+resource &quot;azurerm_resource_group&quot; &quot;main&quot; {
+  name     = &quot;sleekly-production-rg&quot;
+  location = &quot;eastus&quot;
+}
+
+# Key Vault
+resource &quot;azurerm_key_vault&quot; &quot;vault&quot; {
+  name                        = &quot;sleekly-production-vault&quot;
+  location                    = azurerm_resource_group.main.location
+  resource_group_name         = azurerm_resource_group.main.name
+  tenant_id                   = data.azurerm_client_config.current.tenant_id
+  sku_name                    = &quot;standard&quot;
+  purge_protection_enabled    = false
+}
+
+# Create User Assigned Identity for Compute Instances
+resource &quot;azurerm_user_assigned_identity&quot; &quot;compute&quot; {
+  name                = &quot;sleekly-compute-identity&quot;
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+}
+
+# Grant Identity access to Key Vault secrets
+resource &quot;azurerm_key_vault_access_policy&quot; &quot;compute&quot; {
+  key_vault_id = azurerm_key_vault.vault.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_user_assigned_identity.compute.principal_id
+
+  secret_permissions = [
+    &quot;Get&quot;,
+    &quot;List&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h2>🚀 Step 3: CI/CD via GitHub Actions with OpenID Connect (OIDC)</h2>
+<p>Do not generate static client secrets to connect GitHub to Azure. Instead, configure passwordless <strong>OIDC Federated Credentials</strong> so GitHub Actions can dynamically request short-lived access tokens from Azure.</p>
+<h3>1. Azure Setup (One-time CLI setup)</h3>
+<p>Run the following commands in the Azure Cloud Shell to establish trust:</p>
+<pre><code class="language-bash"># 1. Create an Entra ID App Registration
+APP_ID=$(az ad app create --display-name &quot;github-actions-sleekly-deploy&quot; --query appId -o tsv)
+
+# 2. Create a Service Principal
+az ad sp create-for-rbac --uuid $APP_ID --role Contributor --scopes /subscriptions/&lt;SUB_ID&gt;/resourceGroups/sleekly-production-rg
+
+# 3. Create Federated Credential for Main Branch deployments
+cat &lt;&lt;EOF &gt; credential-params.json
+{
+  &quot;name&quot;: &quot;sleekly-gha-main&quot;,
+  &quot;issuer&quot;: &quot;https://token.actions.githubusercontent.com&quot;,
+  &quot;subject&quot;: &quot;repo:&lt;YOUR_GITHUB_USERNAME&gt;/sleekly-3-tier:ref:refs/heads/main&quot;,
+  &quot;description&quot;: &quot;Federated credential for GHA main branch deployments&quot;,
+  &quot;audiences&quot;: [&quot;api://AzureADTokenExchange&quot;]
+}
+EOF
+
+az ad app federated-credential create --id &lt;OBJECT_ID_OF_APP_REGISTRATION&gt; --parameters @credential-params.json
+</code></pre>
+<h3>2. File: <code>.github/workflows/backend-ci.yml</code></h3>
+<p>Create the GitHub Actions workflow to build, scan, and deploy the Rust backend:</p>
+<pre><code class="language-yaml">name: Sleekly Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - &#39;sleekly-backend/**&#39;
+      - &#39;.github/workflows/backend-ci.yml&#39;
+
+permissions:
+  id-token: write  # Required for Azure OIDC
+  contents: read   # Required for checkout
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Log in using passwordless OpenID Connect (OIDC)
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to Azure Container Registry (ACR)
+        run: |
+          az acr login --name sleeklyproductionregistry
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./sleekly-backend
+          file: ./sleekly-backend/Dockerfile
+          push: true
+          tags: sleeklyproductionregistry.azurecr.io/sleekly-backend:${{ github.sha }},sleeklyproductionregistry.azurecr.io/sleekly-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Image Vulnerability Scanning
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: &#39;sleeklyproductionregistry.azurecr.io/sleekly-backend:${{ github.sha }}&#39;
+          format: &#39;table&#39;
+          exit-code: &#39;1&#39;
+          ignore-unfixed: true
+          vuln-type: &#39;os,library&#39;
+          severity: &#39;CRITICAL,HIGH&#39;
+
+      # Rolling upgrade of Azure Scale Set
+      - name: Update Azure VMSS Compute Tier
+        uses: azure/CLI@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az vmss update --resource-group sleekly-production-rg --name sleekly-backend-vmss --set virtualMachineProfile.storageProfile.imageReference.id=/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/sleekly-production-rg/providers/Microsoft.Compute/images/sleekly-backend-v1
+            az vmss update-instances --resource-group sleekly-production-rg --name sleekly-backend-vmss --instance-ids &quot;*&quot;
+</code></pre>
+<hr>
+<h2>⚙️ Step 4: Configuration Management (Ansible)</h2>
+<p>Once VMs scale up, you will run an Ansible playbook to configure Nginx, PM2, systemd, and local observability collectors.</p>
+<h3>1. File: <code>ansible/playbook.yml</code></h3>
+<p>Define target configuration tasks:</p>
+<pre><code class="language-yaml">---
+- name: Configure Sleekly Production Compute Nodes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache and install base dependencies
+      apt:
+        name:
+          - nginx
+          - nodejs
+          - npm
+          - unzip
+        state: present
+        update_cache: yes
+
+    - name: Install PM2 Globally
+      npm:
+        name: pm2
+        global: yes
+        state: present
+
+    # Fetch secrets directly from Azure Key Vault on the node
+    - name: Fetch Environment Variables from Key Vault
+      shell: |
+        az login --identity --allow-no-subscriptions
+        az keyvault secret show --vault-name sleekly-production-vault --name DATABASE-URL --query value -o tsv
+      register: db_url_secret
+      changed_when: false
+
+    - name: Write .env file securely for Backend
+      copy:
+        dest: /var/www/sleekly-backend/.env
+        content: |
+          DATABASE_URL={{ db_url_secret.stdout }}
+          PORT=8080
+          RUST_LOG=info
+        owner: azureuser
+        group: azureuser
+        mode: &#39;0600&#39;
+
+    - name: Copy Nginx Rebranded Config
+      copy:
+        src: ../deployment/nginx/sleekly.conf
+        dest: /etc/nginx/sites-available/sleekly
+        mode: &#39;0644&#39;
+
+    - name: Enable Nginx Config Site
+      file:
+        src: /etc/nginx/sites-available/sleekly
+        dest: /etc/nginx/sites-enabled/sleekly
+        state: link
+
+    - name: Restart Nginx Service
+      systemd:
+        name: nginx
+        state: restarted
+        enabled: yes
+</code></pre>
+<hr>
+<h2>📊 Step 5: Observability Dashboard (Prometheus &amp; Grafana)</h2>
+<p>To manage operations, you will collect and display logs and traces on a unified Grafana dashboard.</p>
+<h3>1. Backend Instrumentation (OTel)</h3>
+<p>Add tracing instrumentation inside your Rust codebase. Update <a href="file:///Users/mann/Documents/Antigravity/cc_desktop_new/cardcanvas-3-tier/sleekly-backend/src/main.rs">main.rs</a>:</p>
+<pre><code class="language-rust">use opentelemetry::{global, sdk::trace::Tracer};
+use opentelemetry_otlp::WithExportConfig;
+use tracing_subscriber::{layer::SubscriberExt, Registry};
+
+fn init_telemetry() -&gt; Tracer {
+    // Configures OTLP exporter pointing to OpenTelemetry Collector container/agent
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint(&quot;http://otel-collector:4317&quot;),
+        )
+        .install_batch(opentelemetry::runtime::Tokio)
+        .expect(&quot;Failed to initialize OpenTelemetry&quot;);
+        
+    global::set_tracer_provider(tracer.provider());
+    tracer
+}
+</code></pre>
+<h3>2. SRE Operations Dashboard Configuration</h3>
+<p>Create a Grafana dashboard monitoring the <strong>SRE Golden Signals</strong> of your Axum application:</p>
+<ul>
+<li><strong>Latency</strong>: The duration required to process client API requests.<ul>
+<li><em>PromQL Query</em>: <code>sum(rate(axum_http_request_duration_seconds_sum[5m])) / sum(rate(axum_http_request_duration_seconds_count[5m]))</code></li>
+</ul>
+</li>
+<li><strong>Traffic</strong>: HTTP request volume per second.<ul>
+<li><em>PromQL Query</em>: <code>sum(rate(axum_http_requests_total[5m])) by (method, handler, status)</code></li>
+</ul>
+</li>
+<li><strong>Errors</strong>: Rate of failed requests (HTTP 5xx status codes).<ul>
+<li><em>PromQL Query</em>: <code>sum(rate(axum_http_requests_total{status=~&quot;5..&quot;}[5m]))</code></li>
+</ul>
+</li>
+<li><strong>Saturation</strong>: VM CPU and Memory utilization limits.<ul>
+<li><em>PromQL Query</em>: <code>node_cpu_seconds_total{mode=&quot;idle&quot;}</code> (Inverse metric showing CPU utilization).</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>🐳 Platform Engineering &amp; Landing Zone Sandbox Labs (Docker)</h2>
+<p>To practice platform engineering concepts locally before deploying to public clouds, we have provided a multi-container local topology (<code>docker-compose.platform-sandbox.yml</code>) simulating isolated enterprise network subnets.</p>
+<h3>Local Sandbox Architecture</h3>
+<ul>
+<li><code>sleekly-nginx-ingress</code>: Simulates an <strong>Application Gateway / Public Load Balancer</strong> with WAF. Exposes host port <code>8081</code> to handle root traffic <code>/</code> and api <code>/api/</code> routing.</li>
+<li><code>sleekly-frontend-sandbox</code> &amp; <code>sleekly-backend-sandbox</code>: Simulates compute instances inside <strong>Private Subnets</strong>. These containers do NOT expose any host ports, blocking direct host queries.</li>
+<li><code>sleekly-postgres-sandbox</code>: Simulates a <strong>Private Database Endpoints Subnet</strong>. No host ports exposed, completely isolated.</li>
+<li>Observability Nodes: OpenTelemetry Collector, Prometheus, and Grafana containers monitoring the backend metrics.</li>
+</ul>
+<hr>
+<h3>Lab 1: Network Ingress Routing (Load Balancer Simulation)</h3>
+<ol>
+<li>Verify that the Nginx ingress acts as the single gateway for public requests.</li>
+<li>Direct HTTP requests to the frontend and backend are blocked from the host since they bind no host ports.</li>
+<li>Access the web app at <code>http://localhost:8081</code> which Nginx routes internally.</li>
+</ol>
+<h3>Lab 2: Subnet Isolation Verification (NSG Simulation)</h3>
+<ol>
+<li>Run a shell command inside the frontend sandbox container to test database access:<pre><code class="language-bash">docker exec -it sleekly-frontend-sandbox nc -zv postgres 5432
+</code></pre>
+<em>Result</em>: Connection fails or command not found due to network isolation. Next.js cannot query the database directly.</li>
+<li>Run the same command inside the backend sandbox container:<pre><code class="language-bash">docker exec -it sleekly-backend-sandbox nc -zv postgres 5432
+</code></pre>
+<em>Result</em>: Connection succeeds, verifying backend-to-database communication permissions.</li>
+</ol>
+<h3>Lab 3: Observability Scrape Verification</h3>
+<ol>
+<li>Access the local Grafana monitoring console at <code>http://localhost:3005</code>.</li>
+<li>Connect Prometheus (<code>http://prometheus:9090</code>) as a Data Source in Grafana.</li>
+<li>Query metrics such as <code>axum_http_requests_total</code> to track API request rates in real time.</li>
+</ol>
+<pre><code>
+</code></pre>
+
+    </div>
+</body>
+</html>
