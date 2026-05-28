@@ -1,0 +1,138 @@
+version: '3.8'
+
+networks:
+  # Security networks mimicking Azure subnets
+  dmz-net:
+    driver: bridge
+  web-net:
+    driver: bridge
+  api-net:
+    driver: bridge
+  data-net:
+    driver: bridge
+  observability-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  media_uploads:
+  prometheus_data:
+  grafana_data:
+
+services:
+  # ─── Public Reverse Proxy (Mimicking Azure App Gateway) ───────────────────
+  nginx-ingress:
+    image: nginx:alpine
+    container_name: sleekly-nginx-ingress
+    ports:
+      - "8081:80"
+    volumes:
+      - ./deployment/nginx/sleekly-local-sandbox.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - dmz-net
+      - web-net
+      - api-net
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  # ─── Web Tier (Next.js Frontend in private web zone) ──────────────────────
+  frontend:
+    build:
+      context: ./sleekly-frontend
+      dockerfile: Dockerfile
+    container_name: sleekly-frontend-sandbox
+    environment:
+      NEXT_PUBLIC_API_URL: http://nginx-ingress
+      NODE_ENV: production
+    # Port 3000 is not exposed to the host! Secure zone isolation.
+    networks:
+      - web-net
+      - api-net
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ─── Application Tier (Axum API in private backend zone) ──────────────────
+  backend:
+    build:
+      context: ./sleekly-backend
+      dockerfile: Dockerfile
+    container_name: sleekly-backend-sandbox
+    environment:
+      DATABASE_URL: postgresql://sleekly:sleekly@postgres:5432/sleekly
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      FRONTEND_URL: http://frontend:3000
+      PORT: "8080"
+      RUST_LOG: sleekly_backend=debug,tower_http=info
+      MEDIA_DIR: /app/uploads
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    # Port 8080 is not exposed to the host! Secure zone isolation.
+    networks:
+      - api-net
+      - data-net
+      - observability-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - media_uploads:/app/uploads
+    restart: unless-stopped
+
+  # ─── Data Tier (PostgreSQL in private database zone) ──────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sleekly-postgres-sandbox
+    environment:
+      POSTGRES_USER: sleekly
+      POSTGRES_PASSWORD: sleekly
+      POSTGRES_DB: sleekly
+    # Port 5432 is not exposed to the host! Secure zone isolation.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sleekly"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data-net
+    restart: unless-stopped
+
+  # ─── Observability: OpenTelemetry Collector ──────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: sleekly-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./deployment/monitoring/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    networks:
+      - observability-net
+    restart: unless-stopped
+
+  # ─── Observability: Prometheus ───────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sleekly-prometheus
+    volumes:
+      - ./deployment/monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - observability-net
+    restart: unless-stopped
+
+  # ─── Observability: Grafana ──────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sleekly-grafana
+    ports:
+      - "3005:3000" # Grafana panel served on port 3005
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - observability-net
+    restart: unless-stopped
