@@ -95,7 +95,7 @@ Rust builds are slow because compile-time optimizations require rebuilding crate
 
 ```dockerfile
 # --- Stage 1: Recipe Planner ---
-FROM rust:1.75-slim AS planner
+FROM rust:1.95-slim AS planner
 WORKDIR /app
 RUN cargo install cargo-chef --version 0.1.62
 COPY . .
@@ -103,7 +103,7 @@ COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 # --- Stage 2: Dependency Compiler (Cache layer) ---
-FROM rust:1.75-slim AS cacher
+FROM rust:1.95-slim AS cacher
 WORKDIR /app
 RUN cargo install cargo-chef --version 0.1.62
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
@@ -112,7 +112,7 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # --- Stage 3: Application Builder ---
-FROM rust:1.75-slim AS builder
+FROM rust:1.95-slim AS builder
 WORKDIR /app
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 COPY . .
