@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
 
 env:
-  ACR_NAME: acrcardcanvasprod.azurecr.io
-  RESOURCE_GROUP: rg-cardcanvas-prod
-  VM_FRONTEND_NAME: vm-cc-frontend
-  VM_BACKEND_NAME: vm-cc-backend
+  ACR_NAME: acrsleeklyprod.azurecr.io
+  RESOURCE_GROUP: rg-sleekly-prod
+  VM_FRONTEND_NAME: vm-sleekly-frontend
+  VM_BACKEND_NAME: vm-sleekly-backend
 
 jobs:
   validate-and-test:
@@ -35,12 +35,12 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            cardcanvas-backend/target/
+            sleekly-backend/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run Backend Cargo Check
         run: |
-          cd cardcanvas-backend
+          cd sleekly-backend
           cargo check --release
 
       # Frontend Checks
@@ -49,16 +49,16 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: cardcanvas-frontend/package-lock.json
+          cache-dependency-path: sleekly-frontend/package-lock.json
 
       - name: Install Frontend Dependencies
         run: |
-          cd cardcanvas-frontend
+          cd sleekly-frontend
           npm ci
 
       - name: Run Frontend Lint & Build Check
         run: |
-          cd cardcanvas-frontend
+          cd sleekly-frontend
           npm run lint
           npm run build
         env:
@@ -88,8 +88,8 @@ jobs:
       - name: Build & Push Backend Docker Image
         uses: docker/build-push-action@v4
         with:
-          context: ./cardcanvas-backend
-          file: ./cardcanvas-backend/Dockerfile
+          context: ./sleekly-backend
+          file: ./sleekly-backend/Dockerfile
           push: true
           tags: |
             ${{ env.ACR_NAME }}/backend:${{ github.sha }}
@@ -101,8 +101,8 @@ jobs:
       - name: Build & Push Frontend Docker Image
         uses: docker/build-push-action@v4
         with:
-          context: ./cardcanvas-frontend
-          file: ./cardcanvas-frontend/Dockerfile
+          context: ./sleekly-frontend
+          file: ./sleekly-frontend/Dockerfile
           push: true
           tags: |
             ${{ env.ACR_NAME }}/frontend:${{ github.sha }}
@@ -132,19 +132,19 @@ jobs:
               az acr login --name ${{ env.ACR_NAME }}
               
               # Stop and remove existing container if running
-              docker stop cardcanvas-backend || true
-              docker rm cardcanvas-backend || true
+              docker stop sleekly-backend || true
+              docker rm sleekly-backend || true
               
               # Pull the newly compiled container
               docker pull ${{ env.ACR_NAME }}/backend:${{ github.sha }}
               
               # Start the service
               docker run -d \
-                --name cardcanvas-backend \
+                --name sleekly-backend \
                 --restart always \
                 -p 8080:8080 \
-                -v /var/www/cardcanvas-backend/uploads:/app/uploads \
-                --env-file /var/www/cardcanvas-backend/.env \
+                -v /var/www/sleekly-backend/uploads:/app/uploads \
+                --env-file /var/www/sleekly-backend/.env \
                 ${{ env.ACR_NAME }}/backend:${{ github.sha }}
             "
 
@@ -160,15 +160,15 @@ jobs:
               az acr login --name ${{ env.ACR_NAME }}
               
               # Stop and remove existing container if running
-              docker stop cardcanvas-frontend || true
-              docker rm cardcanvas-frontend || true
+              docker stop sleekly-frontend || true
+              docker rm sleekly-frontend || true
               
               # Pull the newly compiled container
               docker pull ${{ env.ACR_NAME }}/frontend:${{ github.sha }}
               
               # Start the service
               docker run -d \
-                --name cardcanvas-frontend \
+                --name sleekly-frontend \
                 --restart always \
                 -p 80:3000 \
                 -e NEXT_PUBLIC_API_URL=http://10.0.2.4:8080 \

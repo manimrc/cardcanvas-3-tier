@@ -2,8 +2,8 @@
 set -e
 
 # Load application secrets (e.g. DB credentials)
-if [ -f "/var/www/cardcanvas-backend/.env" ]; then
-    source /var/www/cardcanvas-backend/.env
+if [ -f "/var/www/sleekly-backend/.env" ]; then
+    source /var/www/sleekly-backend/.env
 elif [ -f "./.env" ]; then
     source ./.env
 fi
@@ -13,13 +13,13 @@ DB_HOST=${DB_HOST:-"localhost"}
 DB_PORT=${DB_PORT:-"5432"}
 DB_USER=${DB_USER:-"postgres"}
 DB_PASSWORD=${DB_PASSWORD:-"postgres"}
-DB_NAME=${DB_NAME:-"cardcanvas"}
-STORAGE_ACCOUNT=${STORAGE_ACCOUNT:-"stcardcanvasprod"}
-BLOB_CONTAINER=${BLOB_CONTAINER:-"cardcanvas-backups"}
+DB_NAME=${DB_NAME:-"sleekly"}
+STORAGE_ACCOUNT=${STORAGE_ACCOUNT:-"stsleeklyprod"}
+BLOB_CONTAINER=${BLOB_CONTAINER:-"sleekly-backups"}
 
 TIMESTAMP=$(date +%F_%H-%M-%S)
-BACKUP_DIR="/var/backups/cardcanvas"
-LOG_FILE="/var/log/cardcanvas-backend/backup.log"
+BACKUP_DIR="/var/backups/sleekly"
+LOG_FILE="/var/log/sleekly-backend/backup.log"
 
 # Ensure directories exist
 mkdir -p "$BACKUP_DIR"
@@ -34,9 +34,9 @@ PGPASSWORD="$DB_PASSWORD" pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "
 
 # 2. Package user uploaded files
 UPLOADS_TAR="$BACKUP_DIR/uploads_$TIMESTAMP.tar.gz"
-if [ -d "/var/www/cardcanvas-backend/uploads" ]; then
+if [ -d "/var/www/sleekly-backend/uploads" ]; then
     echo "[$(date)] Packaging user uploads..." >> "$LOG_FILE"
-    tar -czf "$UPLOADS_TAR" -C "/var/www/cardcanvas-backend/uploads" .
+    tar -czf "$UPLOADS_TAR" -C "/var/www/sleekly-backend/uploads" .
 else
     echo "[$(date)] Uploads folder not found, skipping packaging." >> "$LOG_FILE"
     UPLOADS_TAR=""

@@ -13,13 +13,13 @@ provider "azurerm" {
 
 # 1. Resource Group
 resource "azurerm_resource_group" "rg" {
-  name     = "rg-cardcanvas-vm"
+  name     = "rg-sleekly-vm"
   location = "East US"
 }
 
 # 2. Virtual Network & Subnets
 resource "azurerm_virtual_network" "vnet" {
-  name                = "vnet-cardcanvas-vm"
+  name                = "vnet-sleekly-vm"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = ["10.0.0.0/16"]
@@ -86,7 +86,7 @@ resource "azurerm_postgresql_flexible_server" "db" {
 }
 
 resource "azurerm_postgresql_flexible_server_database" "appdb" {
-  name      = "cardcanvas"
+  name      = "sleekly"
   server_id = azurerm_postgresql_flexible_server.db.id
   collation = "en_US.utf8"
   charset   = "utf8"
@@ -94,7 +94,7 @@ resource "azurerm_postgresql_flexible_server_database" "appdb" {
 
 # 4. Frontend VM Setup
 resource "azurerm_public_ip" "frontend_pip" {
-  name                = "pip-cc-frontend"
+  name                = "pip-sleekly-frontend"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Static"
@@ -102,7 +102,7 @@ resource "azurerm_public_ip" "frontend_pip" {
 }
 
 resource "azurerm_network_security_group" "frontend_nsg" {
-  name                = "nsg-cc-frontend"
+  name                = "nsg-sleekly-frontend"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -144,7 +144,7 @@ resource "azurerm_network_security_group" "frontend_nsg" {
 }
 
 resource "azurerm_network_interface" "frontend_nic" {
-  name                = "nic-cc-frontend"
+  name                = "nic-sleekly-frontend"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -162,7 +162,7 @@ resource "azurerm_network_interface_security_group_association" "frontend_nsg_as
 }
 
 resource "azurerm_linux_virtual_machine" "frontend_vm" {
-  name                = "vm-cc-frontend"
+  name                = "vm-sleekly-frontend"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   size                = "Standard_B1s" # Cost-effective low-cost VM
@@ -193,7 +193,7 @@ resource "azurerm_linux_virtual_machine" "frontend_vm" {
 
 # 5. Backend VM Setup
 resource "azurerm_public_ip" "backend_pip" {
-  name                = "pip-cc-backend"
+  name                = "pip-sleekly-backend"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Static"
@@ -201,7 +201,7 @@ resource "azurerm_public_ip" "backend_pip" {
 }
 
 resource "azurerm_network_security_group" "backend_nsg" {
-  name                = "nsg-cc-backend"
+  name                = "nsg-sleekly-backend"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -233,7 +233,7 @@ resource "azurerm_network_security_group" "backend_nsg" {
 }
 
 resource "azurerm_network_interface" "backend_nic" {
-  name                = "nic-cc-backend"
+  name                = "nic-sleekly-backend"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -251,7 +251,7 @@ resource "azurerm_network_interface_security_group_association" "backend_nsg_ass
 }
 
 resource "azurerm_linux_virtual_machine" "backend_vm" {
-  name                = "vm-cc-backend"
+  name                = "vm-sleekly-backend"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   size                = "Standard_B2s" # Slightly larger for Rust application processing

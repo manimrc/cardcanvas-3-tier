@@ -14,8 +14,8 @@ runcmd:
   # Install PM2 globally
   - npm install -g pm2
   # Setup application directory
-  - mkdir -p /var/www/cardcanvas-frontend
-  - chown -R azureuser:azureuser /var/www/cardcanvas-frontend
+  - mkdir -p /var/www/sleekly-frontend
+  - chown -R azureuser:azureuser /var/www/sleekly-frontend
   # Start Nginx
   - systemctl enable nginx
   - systemctl start nginx

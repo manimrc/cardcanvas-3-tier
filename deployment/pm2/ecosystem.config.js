@@ -1,9 +1,9 @@
 module.exports = {
   apps: [
     {
-      name: 'cardcanvas-frontend',
+      name: 'sleekly-frontend',
       script: 'server.js',
-      cwd: '/var/www/cardcanvas-frontend',
+      cwd: '/var/www/sleekly-frontend',
       instances: 'max',
       exec_mode: 'cluster',
       env: {

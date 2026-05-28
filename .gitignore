@@ -7,7 +7,7 @@
 ehthumbs.db
 Thumbs.db
 
-# Node / Next.js (cardcanvas-v3)
+# Node / Next.js (sleekly-v3)
 node_modules/
 .next/
 out/
@@ -20,13 +20,13 @@ yarn-error.log*
 .vercel
 *.tsbuildinfo
 
-# Rust / Cargo (cardcanvas-backend)
-/cardcanvas-backend/target/
+# Rust / Cargo (sleekly-backend)
+/sleekly-backend/target/
 **/*.rs.bk
 Cargo.lock
 
 # Database / Media
-cardcanvas-backend/uploads/
+sleekly-backend/uploads/
 data/
 
 # Terraform (infrastructure / infrastructure-vm)

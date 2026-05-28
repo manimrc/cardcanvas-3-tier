@@ -1,6 +1,6 @@
 # 🐳 Production Engineering, Docker & Azure DevOps Operations Guide
 
-This guide is a hands-on learning document for **CardCanvas**. It is designed to bridge the gap between application development and system operations (SRE / DevOps) with a specific focus on enterprise-grade container pipelines and Azure-native automated workflows.
+This guide is a hands-on learning document for **Sleekly**. It is designed to bridge the gap between application development and system operations (SRE / DevOps) with a specific focus on enterprise-grade container pipelines and Azure-native automated workflows.
 
 Instead of dumping raw scripts, this document follows a **progressive learning flow**. We start by containerizing the application and monitoring it in a local developer environment, and then evolve that identical architecture into a production-hardened, automated enterprise deployment in Microsoft Azure using Terraform and Azure DevOps (Azure Pipelines).
 
@@ -44,7 +44,7 @@ A production-grade Dockerfile must be:
 2. **Deterministic**: Builds must yield identical layers every run.
 3. **Cached**: Leverage Docker's layer-caching mechanism to keep compilation fast.
 
-#### 1.1.1. Next.js Frontend Dockerfile (`cardcanvas-frontend/Dockerfile`)
+#### 1.1.1. Next.js Frontend Dockerfile (`sleekly-frontend/Dockerfile`)
 The frontend uses a **multi-stage build** to avoid copying developer dependencies (`devDependencies`) and raw source files into the runtime image. We configure Next.js to use `standalone` output, which aggregates only the files required to run the Node.js server.
 
 ```dockerfile
@@ -90,7 +90,7 @@ CMD ["node", "server.js"]
 
 ---
 
-#### 1.1.2. Rust Axum Backend Dockerfile (`cardcanvas-backend/Dockerfile`)
+#### 1.1.2. Rust Axum Backend Dockerfile (`sleekly-backend/Dockerfile`)
 Rust builds are slow because compile-time optimizations require rebuilding crates. We use **cargo-chef** to cache intermediate Rust library compilations.
 
 ```dockerfile
@@ -119,7 +119,7 @@ COPY . .
 # Copy pre-compiled dependencies and build target directories
 COPY --from=cacher /app/target target
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
-RUN cargo build --release --bin cardcanvas-backend
+RUN cargo build --release --bin sleekly-backend
 
 # --- Stage 4: Bare Runtime Image ---
 FROM debian:bookworm-slim AS runtime
@@ -127,12 +127,12 @@ WORKDIR /app
 # Install OpenSSL 3 and CA certificates for secure HTTPS external queries
 RUN apt-get update && apt-get install -y ca-certificates libssl3 && rm -rf /var/lib/apt/lists/*
 # Copy binary and migrations folder
-COPY --from=builder /app/target/release/cardcanvas-backend /app/
+COPY --from=builder /app/target/release/sleekly-backend /app/
 COPY --from=builder /app/migrations /app/migrations
 RUN mkdir -p /app/uploads
 ENV PORT=8080
 EXPOSE 8080
-CMD ["./cardcanvas-backend"]
+CMD ["./sleekly-backend"]
 ```
 
 ##### 🧑‍🏫 Why use `cargo-chef`?
@@ -150,7 +150,7 @@ Create `docker-compose.dev.yml` in the project root:
 version: '3.8'
 
 networks:
-  cardcanvas-dev-net:
+  sleekly-dev-net:
     driver: bridge
 
 volumes:
@@ -163,19 +163,19 @@ services:
   # Database Layer
   postgres-dev:
     image: postgres:15-alpine
-    container_name: cc-postgres-dev
+    container_name: sleekly-postgres-dev
     environment:
-      POSTGRES_USER: cc_dev_user
-      POSTGRES_PASSWORD: cc_dev_password
-      POSTGRES_DB: cardcanvas_dev
+      POSTGRES_USER: sleekly_dev_user
+      POSTGRES_PASSWORD: sleekly_dev_password
+      POSTGRES_DB: sleekly_dev
     ports:
       - "5432:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data
     networks:
-      - cardcanvas-dev-net
+      - sleekly-dev-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cc_dev_user -d cardcanvas_dev"]
+      test: ["CMD-SHELL", "pg_isready -U sleekly_dev_user -d sleekly_dev"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -183,22 +183,22 @@ services:
   # Backend REST API Layer
   backend-dev:
     build:
-      context: ./cardcanvas-backend
+      context: ./sleekly-backend
       dockerfile: Dockerfile
-    container_name: cc-backend-dev
+    container_name: sleekly-backend-dev
     environment:
-      DATABASE_URL: postgres://cc_dev_user:cc_dev_password@postgres-dev:5432/cardcanvas_dev
+      DATABASE_URL: postgres://sleekly_dev_user:sleekly_dev_password@postgres-dev:5432/sleekly_dev
       JWT_SECRET: local-dev-only-secret-key-123456789
       PORT: 8080
       MEDIA_DIR: /app/uploads
-      RUST_LOG: cardcanvas_backend=debug,tower_http=info
+      RUST_LOG: sleekly_backend=debug,tower_http=info
       FRONTEND_URL: http://localhost:3000
     ports:
       - "8080:8080"
     volumes:
-      - ./cardcanvas-backend/uploads:/app/uploads
+      - ./sleekly-backend/uploads:/app/uploads
     networks:
-      - cardcanvas-dev-net
+      - sleekly-dev-net
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -206,16 +206,16 @@ services:
   # Frontend Next.js Web Layer
   frontend-dev:
     build:
-      context: ./cardcanvas-frontend
+      context: ./sleekly-frontend
       dockerfile: Dockerfile
-    container_name: cc-frontend-dev
+    container_name: sleekly-frontend-dev
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       PORT: 3000
     ports:
       - "3000:3000"
     networks:
-      - cardcanvas-dev-net
+      - sleekly-dev-net
     depends_on:
       - backend-dev
 
@@ -229,7 +229,7 @@ services:
     volumes:
       - loki-data:/loki
     networks:
-      - cardcanvas-dev-net
+      - sleekly-dev-net
 
   # Observability - Promtail (Log Collector Agent)
   promtail:
@@ -242,7 +242,7 @@ services:
       - ./deployment/observability/promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
     networks:
-      - cardcanvas-dev-net
+      - sleekly-dev-net
     depends_on:
       - loki
 
@@ -256,7 +256,7 @@ services:
       - ./deployment/observability/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     networks:
-      - cardcanvas-dev-net
+      - sleekly-dev-net
     depends_on:
       - backend-dev
 
@@ -269,7 +269,7 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
     networks:
-      - cardcanvas-dev-net
+      - sleekly-dev-net
     depends_on:
       - loki
       - prometheus
@@ -280,7 +280,7 @@ services:
 ### 1.3. Deep-Dive: Networking, Volumes, & Service Discovery
 
 #### 1.3.1. Container Networking (Docker Bridge Network)
-When Docker compose boots this stack, it creates an isolated virtual bridge network called `cardcanvas-dev-net`.
+When Docker compose boots this stack, it creates an isolated virtual bridge network called `sleekly-dev-net`.
 - Docker allocates a private subnet (e.g. `172.20.0.0/16`) for this network.
 - Each service gets assigned a dynamic IP inside this subnet (e.g., `172.20.0.2` for `postgres-dev`, `172.20.0.3` for `backend-dev`).
 - **DNS Resolution**: Docker runs an embedded DNS server at IP `127.0.11`. When `backend-dev` looks up connection string `postgres-dev`, the DNS server resolves `postgres-dev` to its current container IP.
@@ -288,7 +288,7 @@ When Docker compose boots this stack, it creates an isolated virtual bridge netw
 #### 1.3.2. Volumes
 We use two types of volumes:
 1. **Named Volumes** (`pg-data`): Created and managed by Docker in a system-specific directory (e.g., `/var/lib/docker/volumes/`). Named volumes are used for persistent application state like databases. Even if the container is deleted (`docker compose down`), the data persists.
-2. **Bind Mounts** (`./cardcanvas-backend/uploads`): Maps a literal directory from the host filesystem directly inside the container namespace. Useful for developer inspection (e.g., viewing uploaded files locally).
+2. **Bind Mounts** (`./sleekly-backend/uploads`): Maps a literal directory from the host filesystem directly inside the container namespace. Useful for developer inspection (e.g., viewing uploaded files locally).
 
 ---
 
@@ -301,7 +301,7 @@ global:
   scrape_interval: 10s # Scrape targets every 10 seconds
 
 scrape_configs:
-  - job_name: 'cardcanvas-backend'
+  - job_name: 'sleekly-backend'
     metrics_path: '/api/metrics'
     static_configs:
       - targets: ['backend-dev:8080']
@@ -336,14 +336,14 @@ scrape_configs:
 ```
 
 #### 1.4.3. The Power of Structured JSON Logging
-In [main.rs](file:///Users/mann/Documents/cardcanvas-backend/src/main.rs), we configured our Rust logger (`tracing-subscriber`) to output logs in pure JSON.
+In [main.rs](file:///Users/mann/Documents/sleekly-backend/src/main.rs), we configured our Rust logger (`tracing-subscriber`) to output logs in pure JSON.
 When Axum prints an error:
 ```json
 {"timestamp":"2026-05-23T13:10:00Z","level":"ERROR","fields":{"message":"Database health check failed","error":"Connection refused"}}
 ```
 Loki stores this structured JSON log. In Grafana, you can search for logs using simple LogQL filters:
 ```logql
-{container="cc-backend-dev"} | json | level = "ERROR"
+{container="sleekly-backend-dev"} | json | level = "ERROR"
 ```
 This is much more efficient than using regular expressions to parse plain text logs.
 
@@ -366,10 +366,10 @@ docker compose -f docker-compose.dev.yml ps
 docker compose -f docker-compose.dev.yml logs --tail=100 backend-dev
 
 # 3. Inspect container metadata (IPs, mounts, healthcheck results)
-docker inspect cc-backend-dev
+docker inspect sleekly-backend-dev
 
 # 4. Open a shell inside the running container to debug connectivity
-docker exec -it cc-backend-dev /bin/sh
+docker exec -it sleekly-backend-dev /bin/sh
 
 # Test if backend can reach database from inside the container
 nc -zvw3 postgres-dev 5432
@@ -463,7 +463,7 @@ terraform {
     resource_group_name  = "rg-terraform-state"
     storage_account_name = "stccprodstate"
     container_name       = "tfstate"
-    key                  = "cardcanvas.production.tfstate"
+    key                  = "sleekly.production.tfstate"
     use_oidc             = true # Workload Identity Federation (no client secrets)
   }
 }
@@ -513,7 +513,7 @@ stages:
         backendAzureRmResourceGroupName: 'rg-terraform-state'
         backendAzureRmStorageAccountName: 'stccprodstate'
         backendAzureRmContainerName: 'tfstate'
-        backendAzureRmKey: 'cardcanvas.production.tfstate'
+        backendAzureRmKey: 'sleekly.production.tfstate'
 
     - task: TerraformTaskV4@4
       displayName: 'Terraform Validate'
@@ -575,7 +575,7 @@ stages:
               backendAzureRmResourceGroupName: 'rg-terraform-state'
               backendAzureRmStorageAccountName: 'stccprodstate'
               backendAzureRmContainerName: 'tfstate'
-              backendAzureRmKey: 'cardcanvas.production.tfstate'
+              backendAzureRmKey: 'sleekly.production.tfstate'
 
           - task: TerraformTaskV4@4
             displayName: 'Terraform Apply'
@@ -618,15 +618,15 @@ variables:
   - name: AzureConnection
     value: 'sc-azure-production'
   - name: ACR_NAME
-    value: 'acrcardcanvasprod'
+    value: 'acrsleeklyprod'
   - name: ACR_LOGIN_SERVER
-    value: 'acrcardcanvasprod.azurecr.io'
+    value: 'acrsleeklyprod.azurecr.io'
   - name: VM_RESOURCE_GROUP
-    value: 'rg-cardcanvas-prod'
+    value: 'rg-sleekly-prod'
   - name: VM_BACKEND_STAGING
     value: 'vm-cc-staging'
   - name: VM_BACKEND_PROD
-    value: 'vm-cc-backend'
+    value: 'vm-sleekly-backend'
   - name: IMAGE_TAG
     value: '$(Build.SourceVersion)' # Versioning tagged strictly via Git Commit SHA
 
@@ -641,7 +641,7 @@ stages:
       inputs:
         rustup_version: 'stable'
     - script: |
-        cd cardcanvas-backend
+        cd sleekly-backend
         cargo test --release
       displayName: 'Run Cargo Test'
 
@@ -653,7 +653,7 @@ stages:
         versionSource: 'spec'
         versionSpec: '20.x'
     - script: |
-        cd cardcanvas-frontend
+        cd sleekly-frontend
         npm ci
         npm run lint
         npm run build
@@ -668,7 +668,7 @@ stages:
       inputs:
         repository: '$(ACR_NAME)/backend'
         command: 'build'
-        Dockerfile: 'cardcanvas-backend/Dockerfile'
+        Dockerfile: 'sleekly-backend/Dockerfile'
         tags: |
           $(IMAGE_TAG)
           latest
@@ -727,8 +727,8 @@ stages:
                       --name cc-app-staging \
                       --restart always \
                       -p 8080:8080 \
-                      -v /var/www/cardcanvas-staging/uploads:/app/uploads \
-                      --env-file /var/www/cardcanvas-staging/.env \
+                      -v /var/www/sleekly-staging/uploads:/app/uploads \
+                      --env-file /var/www/sleekly-staging/.env \
                       $(ACR_LOGIN_SERVER)/backend:$(IMAGE_TAG)
                   "
 
@@ -755,7 +755,7 @@ stages:
                   --resource-group $(VM_RESOURCE_GROUP) \
                   --name $(VM_BACKEND_PROD) \
                   --command-id RunShellScript \
-                  --scripts "/bin/bash /var/www/cardcanvas-backend/scripts/deploy-blue-green.sh $(IMAGE_TAG)"
+                  --scripts "/bin/bash /var/www/sleekly-backend/scripts/deploy-blue-green.sh $(IMAGE_TAG)"
 ```
 
 ---
@@ -789,10 +789,10 @@ We use the Environment feature in Azure DevOps to enforce gating. Staging is upd
 
 ### 2.6. Secrets Management with Azure Key Vault Integration
 
-To prevent secrets from leaking in git repositories, our database passwords and JWT secrets are stored in an **Azure Key Vault** (`kv-cardcanvas-prod`).
+To prevent secrets from leaking in git repositories, our database passwords and JWT secrets are stored in an **Azure Key Vault** (`kv-sleekly-prod`).
 
 We configure Key Vault access using **Azure Managed Service Identity (MSI)**:
-1. Enable System-Assigned Identity on the VM (`vm-cc-backend`).
+1. Enable System-Assigned Identity on the VM (`vm-sleekly-backend`).
 2. Set a Key Vault access policy allowing the VM's identity to run **Get Secrets** operations.
 3. During VM deployment or application startup, the VM requests secrets directly from Key Vault over a secure connection:
 
@@ -802,10 +802,10 @@ We configure Key Vault access using **Azure Managed Service Identity (MSI)**:
 TOKEN=$(curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -H Metadata:true | jq -r .access_token)
 
 # 2. Extract database password secret directly from Key Vault API
-DB_PASSWORD=$(curl -s 'https://kv-cardcanvas-prod.vault.azure.net/secrets/DB-PASSWORD?api-version=7.4' -H "Authorization: Bearer $TOKEN" | jq -r .value)
+DB_PASSWORD=$(curl -s 'https://kv-sleekly-prod.vault.azure.net/secrets/DB-PASSWORD?api-version=7.4' -H "Authorization: Bearer $TOKEN" | jq -r .value)
 
 # 3. Write variables to .env on the fly (never commits password to disk or environment definitions)
-echo "DB_PASSWORD=$DB_PASSWORD" >> /var/www/cardcanvas-backend/.env
+echo "DB_PASSWORD=$DB_PASSWORD" >> /var/www/sleekly-backend/.env
 ```
 
 ---
@@ -814,7 +814,7 @@ echo "DB_PASSWORD=$DB_PASSWORD" >> /var/www/cardcanvas-backend/.env
 
 Nginx acts as the entry gateway. It terminates SSL, forwards traffic to the Docker container layers, secures headers, limits requests to prevent DDoS attacks, and caches static files.
 
-Create Nginx Configuration: `/etc/nginx/sites-available/cardcanvas`
+Create Nginx Configuration: `/etc/nginx/sites-available/sleekly`
 
 ```nginx
 # Configure Rate Limiting: 100 requests per minute per IP address
@@ -837,7 +837,7 @@ upstream backend_servers {
 server {
     listen 80;
     listen [::]:80;
-    server_name cardcanvas.yourdomain.com;
+    server_name sleekly.yourdomain.com;
     return 301 https://$host$request_uri;
 }
 
@@ -845,11 +845,11 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name cardcanvas.yourdomain.com;
+    server_name sleekly.yourdomain.com;
 
     # SSL Certificates (Issued via Certbot)
-    ssl_certificate /etc/letsencrypt/live/cardcanvas.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/cardcanvas.yourdomain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/sleekly.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sleekly.yourdomain.com/privkey.pem;
 
     # Strict SSL Security Settings (A+ Profile)
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -934,13 +934,13 @@ Create file `scripts/deploy-blue-green.sh`:
 # Zero-Downtime Blue/Green Container Deployment Script
 set -eo pipefail
 
-REGISTRY="acrcardcanvasprod.azurecr.io"
+REGISTRY="acrsleeklyprod.azurecr.io"
 IMAGE_NAME="$REGISTRY/backend"
 IMAGE_TAG="${1:-latest}" # Defaults to latest if tag not provided
-NGINX_CONF="/etc/nginx/sites-available/cardcanvas"
+NGINX_CONF="/etc/nginx/sites-available/sleekly"
 
 # 1. Determine active running port
-ACTIVE_PORT=$(docker ps --format "{{.Ports}}" --filter "name=cc-backend-prod" | grep -oE "808[0-9]" | head -n1 || echo "")
+ACTIVE_PORT=$(docker ps --format "{{.Ports}}" --filter "name=sleekly-backend-prod" | grep -oE "808[0-9]" | head -n1 || echo "")
 
 if [ "$ACTIVE_PORT" = "8080" ] || [ -empty "$ACTIVE_PORT" ]; then
     NEW_SLOT="green"
@@ -957,16 +957,16 @@ fi
 echo "Deploying update to slot: $NEW_SLOT (Port: $NEW_PORT)..."
 
 # 2. Pull new image version
-az acr login --name acrcardcanvasprod
+az acr login --name acrsleeklyprod
 docker pull "$IMAGE_NAME:$IMAGE_TAG"
 
 # 3. Start new container
 docker run -d \
-  --name "cc-backend-prod-$NEW_SLOT" \
+  --name "sleekly-backend-prod-$NEW_SLOT" \
   --restart always \
   -p "127.0.0.1:$NEW_PORT:8080" \
-  -v /var/www/cardcanvas-backend/uploads:/app/uploads \
-  --env-file /var/www/cardcanvas-backend/.env \
+  -v /var/www/sleekly-backend/uploads:/app/uploads \
+  --env-file /var/www/sleekly-backend/.env \
   "$IMAGE_NAME:$IMAGE_TAG"
 
 # 4. Perform Health Check Loop
@@ -986,8 +986,8 @@ done
 
 if [ "$HEALTH_STATUS" != "healthy" ]; then
     echo "ERROR: Health check failed! Rolling back deployment..."
-    docker stop "cc-backend-prod-$NEW_SLOT" || true
-    docker rm "cc-backend-prod-$NEW_SLOT" || true
+    docker stop "sleekly-backend-prod-$NEW_SLOT" || true
+    docker rm "sleekly-backend-prod-$NEW_SLOT" || true
     exit 1
 fi
 
@@ -1005,8 +1005,8 @@ sudo systemctl reload nginx
 if [ -n "$ACTIVE_PORT" ]; then
     echo "Letting active requests drain, then stopping old container slot: $OLD_SLOT..."
     sleep 10
-    docker stop "cc-backend-prod-$OLD_SLOT" || true
-    docker rm "cc-backend-prod-$OLD_SLOT" || true
+    docker stop "sleekly-backend-prod-$OLD_SLOT" || true
+    docker rm "sleekly-backend-prod-$OLD_SLOT" || true
 fi
 
 echo "Zero-downtime deployment finished successfully! Active slot: $NEW_SLOT (Port: $NEW_PORT)"
@@ -1058,7 +1058,7 @@ To optimize storage, we configure an **ACR Task** or a retention policy to delet
 * **Retention Window**: Retain only the latest **30 images** or images built within the last **30 days**. This keeps enough history to roll back if needed while preventing unbounded storage growth.
 * Run a weekly prune task in ACR:
   ```bash
-  az acr config retention update --registry acrcardcanvasprod --type UntaggedManifests --status enabled --days 7
+  az acr config retention update --registry acrsleeklyprod --type UntaggedManifests --status enabled --days 7
   ```
 
 ---
@@ -1068,7 +1068,7 @@ To optimize storage, we configure an **ACR Task** or a retention policy to delet
 | Incident | Root Cause Analysis | Action / Command |
 | :--- | :--- | :--- |
 | **Pipeline fails at deploy** | Managed Identity lacks Key Vault Access permission. | Verify the VM's identity is allowed to **Get** secrets in Key Vault policies. |
-| **Nginx returns 502 Bad Gateway** | The Axum app container crashed or is not running on the expected port (8080/8081). | `docker ps -a` to inspect active containers, followed by `docker logs cc-backend-prod-blue`. |
+| **Nginx returns 502 Bad Gateway** | The Axum app container crashed or is not running on the expected port (8080/8081). | `docker ps -a` to inspect active containers, followed by `docker logs sleekly-backend-prod-blue`. |
 | **PostgreSQL connection timeout** | The database NSG rules block the VM's private IP. | Check the subnet NSG rules and verify database firewall has private endpoint access enabled. |
 | **Database Migrations fail** | Lock contention from another active transaction. | Run `SELECT * FROM pg_stat_activity;` to check for active queries and terminate blocking transactions. |
 | **Trivy scan fails pipeline** | The base Docker image contains vulnerabilities. | Update the base image in your Dockerfile (e.g., upgrade `rust:1.75-slim` to a newer patch release) and rebuild. |

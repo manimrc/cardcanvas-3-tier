@@ -13,13 +13,13 @@ provider "azurerm" {
 
 # 1. Resource Group
 resource "azurerm_resource_group" "rg" {
-  name     = "rg-cardcanvas-prod"
+  name     = "rg-sleekly-prod"
   location = "East US"
 }
 
 # 2. Virtual Network & Subnets
 resource "azurerm_virtual_network" "vnet" {
-  name                = "vnet-cardcanvas"
+  name                = "vnet-sleekly"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = ["10.0.0.0/16"]
@@ -64,7 +64,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "db_dns_link" {
 
 # 3. Azure PostgreSQL Flexible Server
 resource "azurerm_postgresql_flexible_server" "db" {
-  name                   = "psql-cardcanvas-prod"
+  name                   = "psql-sleekly-prod"
   resource_group_name    = azurerm_resource_group.rg.name
   location               = azurerm_resource_group.rg.location
   version                = "16"
@@ -79,7 +79,7 @@ resource "azurerm_postgresql_flexible_server" "db" {
 }
 
 resource "azurerm_postgresql_flexible_server_database" "appdb" {
-  name      = "cardcanvas"
+  name      = "sleekly"
   server_id = azurerm_postgresql_flexible_server.db.id
   collation = "en_US.utf8"
   charset   = "utf8"
@@ -87,7 +87,7 @@ resource "azurerm_postgresql_flexible_server_database" "appdb" {
 
 # 4. Azure Container Registry (for Docker Images)
 resource "azurerm_container_registry" "acr" {
-  name                = "acrcardcanvasprod"
+  name                = "acrsleeklyprod"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   sku                 = "Basic"
@@ -96,7 +96,7 @@ resource "azurerm_container_registry" "acr" {
 
 # 5. Public IP & Network Interface for the VM
 resource "azurerm_public_ip" "app_pip" {
-  name                = "pip-cardcanvas-app"
+  name                = "pip-sleekly-app"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Static"
@@ -104,7 +104,7 @@ resource "azurerm_public_ip" "app_pip" {
 }
 
 resource "azurerm_network_security_group" "app_nsg" {
-  name                = "nsg-cardcanvas-app"
+  name                = "nsg-sleekly-app"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -134,7 +134,7 @@ resource "azurerm_network_security_group" "app_nsg" {
 }
 
 resource "azurerm_network_interface" "app_nic" {
-  name                = "nic-cardcanvas-app"
+  name                = "nic-sleekly-app"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -153,7 +153,7 @@ resource "azurerm_network_interface_security_group_association" "app_nsg_assoc" 
 
 # 6. Linux Virtual Machine (Docker Host)
 resource "azurerm_linux_virtual_machine" "app_vm" {
-  name                = "vm-cardcanvas-app"
+  name                = "vm-sleekly-app"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   size                = "Standard_B2s"

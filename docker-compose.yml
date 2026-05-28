@@ -2,18 +2,18 @@ services:
   # ─── Tier 3: PostgreSQL Database ───────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: cc-postgres
+    container_name: sleekly-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: cardcanvas
-      POSTGRES_PASSWORD: cardcanvas
-      POSTGRES_DB: cardcanvas
+      POSTGRES_USER: sleekly
+      POSTGRES_PASSWORD: sleekly
+      POSTGRES_DB: sleekly
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cardcanvas"]
+      test: ["CMD-SHELL", "pg_isready -U sleekly"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,19 +21,19 @@ services:
   # ─── Tier 2: Rust Backend (Axum API) ───────────────────────────────────────
   backend:
     build:
-      context: ./cardcanvas-backend
+      context: ./sleekly-backend
       dockerfile: Dockerfile
-    container_name: cc-backend
+    container_name: sleekly-backend
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://cardcanvas:cardcanvas@postgres:5432/cardcanvas
+      DATABASE_URL: postgresql://sleekly:sleekly@postgres:5432/sleekly
       JWT_SECRET: dev-jwt-secret-change-in-production
       FRONTEND_URL: http://localhost:3000
       PORT: "8080"
-      RUST_LOG: cardcanvas_backend=debug,tower_http=info
+      RUST_LOG: sleekly_backend=debug,tower_http=info
       MEDIA_DIR: /app/uploads
     ports:
       - "8080:8080"
@@ -43,9 +43,9 @@ services:
   # ─── Tier 1: Next.js Frontend ──────────────────────────────────────────────
   frontend:
     build:
-      context: ./cardcanvas-frontend
+      context: ./sleekly-frontend
       dockerfile: Dockerfile
-    container_name: cc-frontend
+    container_name: sleekly-frontend
     restart: unless-stopped
     depends_on:
       - backend

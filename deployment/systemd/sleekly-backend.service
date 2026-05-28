@@ -1,0 +1,18 @@
+[Unit]
+Description=Sleekly Rust Backend
+After=network.target
+
+[Service]
+User=azureuser
+Group=azureuser
+WorkingDirectory=/var/www/sleekly-backend
+# Load environment variables from a secure file
+EnvironmentFile=/var/www/sleekly-backend/.env
+ExecStart=/var/www/sleekly-backend/sleekly-backend
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/sleekly-backend/out.log
+StandardError=append:/var/log/sleekly-backend/err.log
+
+[Install]
+WantedBy=multi-user.target

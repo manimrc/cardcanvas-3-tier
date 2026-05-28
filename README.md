@@ -1,6 +1,6 @@
-# CardCanvas
+# Sleekly
 
-CardCanvas is a modern, 3-tier enterprise visual workspace for organizing cards, notes, links, and media on an infinite canvas.
+Sleekly is a modern, 3-tier enterprise visual workspace for organizing cards, notes, links, and media on an infinite canvas.
 
 ## Architecture
 
@@ -15,8 +15,8 @@ The project is organized as a **Domain-Driven Modular Monolith**, ensuring long-
 
 ```text
 .
-├── cardcanvas-frontend/    # Frontend (Next.js)
-├── cardcanvas-backend/     # Backend (Rust / Axum)
+├── sleekly-frontend/    # Frontend (Next.js)
+├── sleekly-backend/     # Backend (Rust / Axum)
 │   ├── src/
 │   │   ├── domain/         # Business Domains (Auth, Cards, Workspaces, etc.)
 │   │   ├── infrastructure/ # Shared Infrastructure (Auth Middleware, DB)

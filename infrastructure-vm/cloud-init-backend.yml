@@ -12,7 +12,7 @@ runcmd:
   # Install Rust (in case user wants to compile directly on the VM)
   - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
   # Setup application and log directories
-  - mkdir -p /var/www/cardcanvas-backend/uploads
-  - mkdir -p /var/log/cardcanvas-backend
-  - chown -R azureuser:azureuser /var/www/cardcanvas-backend
-  - chown -R azureuser:azureuser /var/log/cardcanvas-backend
+  - mkdir -p /var/www/sleekly-backend/uploads
+  - mkdir -p /var/log/sleekly-backend
+  - chown -R azureuser:azureuser /var/www/sleekly-backend
+  - chown -R azureuser:azureuser /var/log/sleekly-backend
