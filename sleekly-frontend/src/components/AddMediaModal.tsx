@@ -152,7 +152,6 @@ export default function AddMediaModal({ open, onClose, onConfirm }: Props) {
             if (t && inferMediaType(t) === 'image') setPreview(t);
             else if (!t) setPreview(null);
           }}
-          onPaste={e => void handleClipboardData(e.nativeEvent)}
         />
 
         <div className="add-media-or">OR</div>
