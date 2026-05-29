@@ -4,7 +4,17 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.5.0"
+    }
   }
+}
+
+variable "admin_ssh_source_address" {
+  description = "The public IP address or CIDR range allowed to SSH into the VMs. Override this in your terraform.tfvars."
+  type        = string
+  default     = "127.0.0.1/32" # Secure default (loopback only)
 }
 
 provider "azurerm" {
@@ -70,15 +80,21 @@ resource "azurerm_private_dns_zone_virtual_network_link" "db_dns_link" {
 }
 
 # 3. Azure PostgreSQL Flexible Server
+resource "random_password" "postgres_admin" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 resource "azurerm_postgresql_flexible_server" "db" {
-  name                   = "psql-cc-vm-prod"
+  name                   = "psql-sleekly-vm-prod"
   resource_group_name    = azurerm_resource_group.rg.name
   location               = azurerm_resource_group.rg.location
   version                = "16"
   delegated_subnet_id    = azurerm_subnet.subnet_db.id
   private_dns_zone_id    = azurerm_private_dns_zone.db_dns.id
   administrator_login    = "ccadmin"
-  administrator_password = "SecurePassword123!" # Change this in production
+  administrator_password = random_password.postgres_admin.result
   storage_mb             = 32768
   sku_name               = "B_Standard_B1ms" # Cost-effective instance
   
@@ -114,7 +130,7 @@ resource "azurerm_network_security_group" "frontend_nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "*"
+    source_address_prefix      = var.admin_ssh_source_address
     destination_address_prefix = "*"
   }
 
@@ -214,7 +230,7 @@ resource "azurerm_network_security_group" "backend_nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "*"
+    source_address_prefix      = var.admin_ssh_source_address
     destination_address_prefix = "*"
   }
 
